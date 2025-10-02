@@ -1245,6 +1245,8 @@ import { dom, state } from './state.js';
             if (state.waveNumber >= 1) {
                 randomizeEndPoint();
             }
+            state.waveNumber++;
+            updateUI();
             updateGlobalButtonsState();
             updateWaveInfoUI();
             updatePathVisuals();
@@ -1390,8 +1392,7 @@ import { dom, state } from './state.js';
     }
 
     function updateWaveInfoUI() {
-        let waveNumToShow = state.waveInProgress ? state.waveNumber : state.waveNumber + 1;
-        if (waveNumToShow === 0) waveNumToShow = 1;
+        const waveNumToShow = state.waveNumber;
 
         dom.waveInfoTitle.textContent = state.waveInProgress ? '현재 웨이브 정보' : '다음 웨이브 정보';
 
@@ -1428,7 +1429,6 @@ import { dom, state } from './state.js';
         if (state.waveInProgress) return;
         state.waveInProgress = true;
         updateGlobalButtonsState();
-        state.waveNumber++;
         updateUI();
         dom.waveInfoBox.innerHTML = '웨이브 진행 중...';
         updatePathVisuals(); // Hides arrows

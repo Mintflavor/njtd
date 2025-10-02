@@ -33,7 +33,7 @@ export const state = {
     towers: [],
     playerEnergy: 500,
     playerLives: 20,
-    waveNumber: 0,
+    waveNumber: 1,
     playerScore: 0,
     monstersKilled: 0,
     activeCell: null,
