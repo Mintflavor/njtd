@@ -966,7 +966,7 @@ import { dom, state } from './state.js';
         let waveConfig = {};
 
         if (waveNum > 0 && waveNum % 10 === 0) {
-            const bossHpMultiplier = 1 + (waveNum - 10) / 20; // 보스 체력 상승 완화
+            const bossHpMultiplier = 1 + (waveNum - 10) / 17; // 보스 체력 상승 완화
             waveConfig = {
                  monsters: [{ type: 'boss', count: 1, hpMultiplier: hpMultiplier * bossHpMultiplier }]
             };
