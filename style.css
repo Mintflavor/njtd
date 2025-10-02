@@ -258,6 +258,19 @@
             animation: explode 0.3s forwards;
             z-index: 12;
         }
+        .napalm-aura {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 69, 0, 0.3);
+            box-shadow: inset 0 0 15px rgba(255, 69, 0, 0.5);
+            animation: pulse-burn 1s infinite alternate;
+            z-index: 8;
+        }
+
+        @keyframes pulse-burn {
+            from { transform: scale(0.95); opacity: 0.7; }
+            to { transform: scale(1.05); opacity: 0.9; }
+        }
         @keyframes explode {
             from { transform: scale(0.1); opacity: 1; }
             to { transform: scale(1); opacity: 0; }
@@ -474,6 +487,21 @@
         }
         .info-buttons button:hover {
             background-color: #4a4f5a;
+        }
+        .info-btn {
+            background-color: #61dafb;
+            color: #20232a;
+            border: none;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 5px;
+        }
+        .info-btn:hover {
+            background-color: #88eaff;
         }
         .modal-overlay {
             position: fixed;

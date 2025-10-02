@@ -82,6 +82,12 @@ import { dom, state } from './state.js';
             if (e.target === dom.infoModal) dom.infoModal.style.display = 'none';
         });
 
+        const upgradeInfoModal = document.getElementById('upgrade-info-modal');
+        upgradeInfoModal.addEventListener('click', (e) => {
+            if (e.target === upgradeInfoModal) upgradeInfoModal.style.display = 'none';
+        });
+        upgradeInfoModal.querySelector('.modal-close-btn').addEventListener('click', () => upgradeInfoModal.style.display = 'none');
+
         document.addEventListener('click', (e) => {
             if (!dom.placementMenu.contains(e.target) && !e.target.closest('.cell')) {
                 dom.placementMenu.style.display = 'none';
@@ -110,7 +116,7 @@ import { dom, state } from './state.js';
                 const summary = config.TOWER_SUMMARIES[towerTypeEnum];
                 
                 if (stats) {
-                    html += `<h4>${stats.name} (${symbol})</h4>`;
+                    html += `<div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #444;"><h4>${stats.name} (${symbol})</h4>`;
                     if (summary) {
                         html += `<p style="font-style: italic; color: #ccc; margin-top: -10px;">${summary}</p>`;
                     }
@@ -121,7 +127,7 @@ import { dom, state } from './state.js';
                     if (stats.attackSpeed > 0) desc += `공격 속도: ${stats.attackSpeed / 1000}초<br>`;
                     if (stats.aoeRadius > 0) desc += `광역 데미지: ${stats.aoeDamage} (반경: ${stats.aoeRadius / config.CELL_SIZE}칸)<br>`;
                     if (key === 'WALL') desc += `경로를 막지 않으며, 몬스터는 벽을 공격해서 파괴하고 지나갑니다.<br>`;
-                    desc += `</p>`;
+                    desc += `</p><button class="info-btn" onclick="showUpgradeInfoModal('${key}')">레벨별 업그레이드 정보</button></div>`;
                     html += desc;
                 }
             });
@@ -141,6 +147,76 @@ import { dom, state } from './state.js';
         }
         dom.infoModalBody.innerHTML = html;
         dom.infoModal.style.display = 'flex';
+    }
+
+    window.showUpgradeInfoModal = function(towerKey) {
+        const towerType = config.TOWER_TYPES[towerKey];
+        const baseStats = config.TOWER_STATS[towerType];
+        if (!baseStats || towerKey === 'WALL') return;
+
+        let tableHtml = `<h2>${baseStats.name} 업그레이드 정보</h2>`;
+        tableHtml += `<table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 8px; border-bottom: 1px solid #61dafb;">레벨</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #61dafb;">HP</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #61dafb;">데미지</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #61dafb;">공격속도(초)</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #61dafb;">특수능력</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+        let currentDamage = baseStats.damage;
+        let currentAoeDamage = baseStats.aoeDamage;
+
+        for (let level = 1; level <= config.MAX_TOWER_LEVEL; level++) {
+            if (level > 1) {
+                const multiplier = ['CANNON', 'LASER', 'MISSILE'].includes(towerKey) ? 1.3 : 1.2;
+                if (baseStats.damage > 0) {
+                    currentDamage = Math.floor(currentDamage * multiplier);
+                }
+                if (baseStats.aoeDamage > 0) {
+                    currentAoeDamage = Math.floor(currentAoeDamage * multiplier);
+                }
+            }
+
+            const hpIncrease = (level - 1) * Math.floor(baseStats.hp * 0.2);
+            const currentHp = Math.min(baseStats.hp + hpIncrease, 500);
+            
+            let currentAttackSpeed = baseStats.attackSpeed;
+            if (towerKey === 'MISSILE') currentAttackSpeed -= (level - 1) * 100;
+            if (towerKey === 'RAILGUN') currentAttackSpeed -= (level - 1) * 300;
+
+            let specialText = '-';
+            if (towerKey === 'MISSILE') specialText = `광역: ${currentAoeDamage}`;
+            if (towerKey === 'BUFF') specialText = `증폭: x${(baseStats.buffMultiplier + (level - 1) * 0.2).toFixed(1)}`;
+
+            tableHtml += `<tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #444;">${level}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #444;">${currentHp}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #444;">${currentDamage > 0 ? currentDamage : '-'}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #444;">${currentAttackSpeed > 0 ? (currentAttackSpeed / 1000).toFixed(2) : '-'}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #444;">${specialText}</td>
+                          </tr>`;
+        }
+
+        tableHtml += `</tbody></table>`;
+
+        const specialAbilityDescriptions = {
+            CANNON: 'Lv.10 특수능력 [연쇄탄]: 포탄이 2번째 적에게 튕겨나가 50%의 피해를 줍니다.',
+            LASER: 'Lv.10 특수능력 [과충전]: 동일한 적을 계속 공격 시 공격속도가 최대 200%까지 증가합니다.',
+            MISSILE: 'Lv.10 특수능력 [네이팜]: 폭발 지역에 3초간 불타는 장판을 생성하여 지속 피해를 줍니다.',
+            BUFF: 'Lv.10 특수능력 [이중 효과]: 범위 내 아군 타워의 공격속도를 15% 추가로 증가시킵니다.',
+            RAILGUN: 'Lv.10 특수능력 [집행]: 체력 15% 이하의 적을 즉시 처치합니다 (보스 제외).',
+        };
+
+        if (specialAbilityDescriptions[towerKey]) {
+            tableHtml += `<p style="margin-top: 15px; font-weight: bold; color: #61dafb;">${specialAbilityDescriptions[towerKey]}</p>`;
+        }
+
+        document.getElementById('upgrade-info-modal-body').innerHTML = tableHtml;
+        document.getElementById('upgrade-info-modal').style.display = 'flex';
     }
 
 
@@ -352,6 +428,10 @@ import { dom, state } from './state.js';
         };
         if(type === config.TOWER_TYPES.MISSILE) newTower.aoeDamage = stats.aoeDamage;
         if(type === config.TOWER_TYPES.BUFF) newTower.buffMultiplier = stats.buffMultiplier;
+        if(type === config.TOWER_TYPES.LASER) {
+            newTower.currentTargetId = null;
+            newTower.superchargeStacks = 0;
+        }
 
         state.towers.push(newTower);
         
@@ -464,7 +544,11 @@ import { dom, state } from './state.js';
                 const distToLine = Math.abs(monsterVecX * beamVecY - monsterVecY * beamVecX);
                 
                 if (distToLine < config.CELL_SIZE / 2) {
-                    damageMonster(m, effectiveDamage, tower);
+                    if (tower.level === config.MAX_TOWER_LEVEL && m.type !== 'boss' && (m.hp / m.maxHp) <= 0.15) {
+                        damageMonster(m, m.hp, tower); // Execute
+                    } else {
+                        damageMonster(m, effectiveDamage, tower);
+                    }
                 }
             }
         });
@@ -485,6 +569,32 @@ import { dom, state } from './state.js';
 
             if (distance < moveDistance) {
                 damageMonster(p.target, p.damage, p.sourceTower);
+
+                // Chain Shot for Cannon
+                if (p.sourceTower.type === config.TOWER_TYPES.CANNON && p.sourceTower.level === config.MAX_TOWER_LEVEL && !p.isChainShot) {
+                    const searchRadius = 1.5 * config.CELL_SIZE;
+                    const secondTarget = state.monsters.find(m => 
+                        m.id !== p.target.id && 
+                        m.hp > 0 && 
+                        Math.hypot(p.target.x - m.x, p.target.y - m.y) < searchRadius
+                    );
+
+                    if (secondTarget) {
+                        const chainProjectile = {
+                            sourceTower: p.sourceTower,
+                            x: p.target.x, y: p.target.y, // Start from the first target
+                            damage: p.damage * 0.5,
+                            target: secondTarget,
+                            element: document.createElement('div'),
+                            towerType: p.towerType,
+                            isChainShot: true // Prevent infinite chains
+                        };
+                        chainProjectile.element.className = 'projectile';
+                        dom.gameBoard.appendChild(chainProjectile.element);
+                        state.projectiles.push(chainProjectile);
+                    }
+                }
+
                 if (p.towerType === config.TOWER_TYPES.MISSILE) {
                     const stats = config.TOWER_STATS[p.towerType];
                     createExplosion(p.target.x, p.target.y, stats.aoeRadius);
@@ -494,6 +604,27 @@ import { dom, state } from './state.js';
                             if (dist < stats.aoeRadius) damageMonster(m, p.aoeDamage, p.sourceTower);
                         }
                     });
+
+                    // Napalm for Level 10 Missile
+                    if (p.sourceTower.level === config.MAX_TOWER_LEVEL) {
+                        const auraElement = document.createElement('div');
+                        auraElement.className = 'napalm-aura';
+                        auraElement.style.left = `${p.target.x - stats.aoeRadius}px`;
+                        auraElement.style.top = `${p.target.y - stats.aoeRadius}px`;
+                        auraElement.style.width = `${stats.aoeRadius * 2}px`;
+                        auraElement.style.height = `${stats.aoeRadius * 2}px`;
+                        dom.gameBoard.appendChild(auraElement);
+
+                        const napalm_aura = {
+                            x: p.target.x,
+                            y: p.target.y,
+                            radius: stats.aoeRadius,
+                            damagePerSecond: p.aoeDamage * 0.2,
+                            duration: 3000, // 3 seconds
+                            element: auraElement
+                        };
+                        state.activeAuras.push(napalm_aura);
+                    }
                 }
                 p.element.remove();
                 state.projectiles.splice(i, 1);
@@ -649,8 +780,28 @@ import { dom, state } from './state.js';
             updateTowers(effectiveDeltaTime);
             updateMonsters(effectiveDeltaTime);
             updateProjectiles(effectiveDeltaTime);
+            updateAuras(effectiveDeltaTime);
         }
         requestAnimationFrame(gameLoop);
+    }
+
+    function updateAuras(deltaTime) {
+        for (let i = state.activeAuras.length - 1; i >= 0; i--) {
+            const aura = state.activeAuras[i];
+            aura.duration -= deltaTime;
+
+            // Damage monsters in aura
+            state.monsters.forEach(monster => {
+                if (Math.hypot(monster.x - aura.x, monster.y - aura.y) < aura.radius) {
+                    damageMonster(monster, aura.damagePerSecond * (deltaTime / 1000));
+                }
+            });
+
+            if (aura.duration <= 0) {
+                aura.element.remove();
+                state.activeAuras.splice(i, 1);
+            }
+        }
     }
     
     function updateTowers(deltaTime) {
@@ -665,11 +816,39 @@ import { dom, state } from './state.js';
             tower.cooldown -= deltaTime;
             if (tower.cooldown <= 0) {
                 const target = findTarget(tower);
+
+                if (tower.type === config.TOWER_TYPES.LASER && tower.level === config.MAX_TOWER_LEVEL) {
+                    if (target && tower.currentTargetId === target.id) {
+                        tower.superchargeStacks = Math.min(40, tower.superchargeStacks + 1); // Cap at 200% bonus (40 * 5%)
+                    } else {
+                        tower.superchargeStacks = 0;
+                    }
+                    tower.currentTargetId = target ? target.id : null;
+                }
+
                 if (target) {
+                    let attackSpeedMultiplier = 1;
+                    // Dual-Effect for Buff Tower
+                    const buffTowersInRange = state.towers.filter(b => b.type === config.TOWER_TYPES.BUFF && b.level === config.MAX_TOWER_LEVEL && Math.hypot(tower.pixelX - b.pixelX, tower.pixelY - b.pixelY) < config.TOWER_STATS[config.TOWER_TYPES.BUFF].range);
+                    if (buffTowersInRange.length > 0) {
+                        attackSpeedMultiplier = 0.85; 
+                    }
+
+                    // Supercharge for Laser
+                    if (tower.type === config.TOWER_TYPES.LASER && tower.level === config.MAX_TOWER_LEVEL) {
+                        attackSpeedMultiplier /= (1 + tower.superchargeStacks * 0.05);
+                    }
+
                     if (tower.type === config.TOWER_TYPES.LASER) fireLaserBeam(tower, target);
                     else if (tower.type === config.TOWER_TYPES.RAILGUN) fireRailgun(tower, target);
                     else fireProjectile(tower, target);
-                    tower.cooldown = tower.attackSpeed;
+                    tower.cooldown = tower.attackSpeed * attackSpeedMultiplier;
+                } else {
+                    // Reset stacks if no target
+                    if (tower.type === config.TOWER_TYPES.LASER) {
+                        tower.superchargeStacks = 0;
+                        tower.currentTargetId = null;
+                    }
                 }
             }
         });

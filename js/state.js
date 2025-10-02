@@ -38,6 +38,7 @@ export const state = {
     activeCell: null,
     monsters: [],
     projectiles: [],
+    activeAuras: [],
     monsterIdCounter: 0,
     waveInProgress: false,
     monstersToSpawn: [],
