@@ -215,9 +215,16 @@ import { dom, state } from './state.js';
         let currentDamage = baseStats.damage;
         let currentAoeDamage = baseStats.aoeDamage;
         let totalInvestedCost = config.TOWER_COSTS[towerType];
+        let costForNextRow = 0;
 
         for (let level = 1; level <= config.MAX_TOWER_LEVEL; level++) {
-            const upgradeCost = Math.floor(totalInvestedCost * 0.5);
+
+            const displayCost = (level === 1) ? '-' : `⚡${costForNextRow}`;
+
+            costForNextRow = Math.floor(totalInvestedCost * 0.5);
+            if (level < config.MAX_TOWER_LEVEL) {
+                totalInvestedCost += costForNextRow;
+            }
 
             if (level > 1) {
                 const multiplier = ['CANNON', 'LASER', 'MISSILE'].includes(towerKey) ? 1.3 : 1.2;
@@ -245,13 +252,9 @@ import { dom, state } from './state.js';
                             <td style="padding: 8px; border-bottom: 1px solid #444;">${currentHp}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #444;">${currentDamage > 0 ? currentDamage : '-'}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #444;">${currentAttackSpeed > 0 ? (currentAttackSpeed / 1000).toFixed(2) : '-'}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #444;">${level < config.MAX_TOWER_LEVEL ? '⚡' + upgradeCost : '-'}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #444;">${displayCost}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #444;">${specialText}</td>
                           </tr>`;
-            
-            if (level < config.MAX_TOWER_LEVEL) {
-                totalInvestedCost += upgradeCost;
-            }
         }
 
         tableHtml += `</tbody></table>`;
@@ -936,7 +939,7 @@ import { dom, state } from './state.js';
         let waveConfig = {};
 
         if (waveNum > 0 && waveNum % 10 === 0) {
-            const bossHpMultiplier = 1 + (waveNum - 10) / 15; // 보스 체력 상승 완화
+            const bossHpMultiplier = 1 + (waveNum - 10) / 20; // 보스 체력 상승 완화
             waveConfig = {
                  monsters: [{ type: 'boss', count: 1, hpMultiplier: hpMultiplier * bossHpMultiplier }]
             };
