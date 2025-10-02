@@ -442,9 +442,10 @@ import { dom, state } from './state.js';
             }
         } else { // Build tower
             const towerType = config.TOWER_TYPES[action];
-            if (state.playerEnergy >= config.TOWER_COSTS[towerType]) {
-        state.playerEnergy -= cost;
-        state.totalBuildSpent += cost;
+            const cost = config.TOWER_COSTS[towerType];
+            if (state.playerEnergy >= cost) {
+                state.playerEnergy -= cost;
+                state.totalBuildSpent += cost;
                 addTower(x, y, towerType);
             }
         }
@@ -1530,6 +1531,7 @@ import { dom, state } from './state.js';
             .join('<br>');
 
         const gameOverContent = dom.gameOverlay.querySelector('div');
+        const p = gameOverContent.querySelector('p');
         const details = `
             최종 점수: ${state.score.toLocaleString()}<br>
             도달한 웨이브: ${state.waveNumber}<br>
