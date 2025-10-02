@@ -5,6 +5,7 @@ export const dom = {
     waveDisplay: document.getElementById('wave-display-v2').querySelector('span'),
     scoreDisplay: document.getElementById('score-display-v2').querySelector('span'),
     waveInfoBox: document.getElementById('wave-info-box'),
+    waveInfoTitle: document.getElementById('wave-info-title'),
     placementMenu: document.getElementById('placement-menu-v2'),
     buildOptions: document.getElementById('build-options'),
     demolishOption: document.getElementById('demolish-option'),

@@ -151,8 +151,8 @@ import { dom, state } from './state.js';
                 }
             });
         } else if (type === 'monsters') {
-            html += '<h3>몬스터 정보 (현재 웨이브 기준)</h3>';
-            const nextWaveNum = state.waveNumber < 1 ? 1 : state.waveNumber;
+            html += '<h3>몬스터 정보 (다음 웨이브 기준)</h3>';
+            const nextWaveNum = state.waveNumber < 1 ? 1 : state.waveNumber + 1;
             const hpMultiplier = Math.pow(1.2, nextWaveNum - 1);
             Object.values(config.MONSTER_STATS).forEach(stats => {
                 html += `<h4>${stats.name}</h4>`;
@@ -181,7 +181,7 @@ import { dom, state } from './state.js';
                                 <th style="padding: 8px; border-bottom: 1px solid #61dafb;">HP</th>
                                 <th style="padding: 8px; border-bottom: 1px solid #61dafb;">데미지</th>
                                 <th style="padding: 8px; border-bottom: 1px solid #61dafb;">공격속도(초)</th>
-                                <th style="padding: 8px; border-bottom: 1px solid #61dafb;">특수능력</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #61dafb;">부가능력</th>
                             </tr>
                         </thead>
                         <tbody>`;
@@ -222,16 +222,8 @@ import { dom, state } from './state.js';
 
         tableHtml += `</tbody></table>`;
 
-        const specialAbilityDescriptions = {
-            CANNON: 'Lv.10 특수능력 [연쇄탄]: 포탄이 2번째 적에게 튕겨나가 50%의 피해를 줍니다.',
-            LASER: 'Lv.10 특수능력 [과충전]: 동일한 적을 계속 공격 시 공격속도가 최대 200%까지 증가합니다.',
-            MISSILE: 'Lv.10 특수능력 [네이팜]: 폭발 지역에 3초간 불타는 장판을 생성하여 지속 피해를 줍니다.',
-            BUFF: 'Lv.10 특수능력 [이중 효과]: 범위 내 아군 타워의 공격속도를 15% 추가로 증가시킵니다.',
-            RAILGUN: 'Lv.10 특수능력 [집행]: 체력 15% 이하의 적을 즉시 처치합니다 (보스 제외).',
-        };
-
-        if (specialAbilityDescriptions[towerKey]) {
-            tableHtml += `<p style="margin-top: 15px; font-weight: bold; color: #61dafb;">${specialAbilityDescriptions[towerKey]}</p>`;
+        if (config.TOWER_SPECIAL_ABILITIES[towerKey]) {
+            tableHtml += `<p style="margin-top: 15px; font-weight: bold; color: #61dafb;">${config.TOWER_SPECIAL_ABILITIES[towerKey]}</p>`;
         }
 
         document.getElementById('upgrade-info-modal-body').innerHTML = tableHtml;
@@ -344,6 +336,10 @@ import { dom, state } from './state.js';
                     infoText += `<br>버프 증폭: x${(tower.buffMultiplier || baseStats.buffMultiplier).toFixed(1)}${nextBuffText}`;
                 }
                 infoText += `<br>처치 수: ${tower.killCount || 0}`;
+
+                if (tower.level === config.MAX_TOWER_LEVEL && config.TOWER_SPECIAL_ABILITIES[tower.type]) {
+                    infoText += `<br><br><span style="font-size: 12px; font-weight: bold; color: #61dafb;">${config.TOWER_SPECIAL_ABILITIES[tower.type]}</span>`;
+                }
 
                 const upgradeBtnSpan = upgradeBtn.querySelector('span');
 
@@ -1246,9 +1242,14 @@ import { dom, state } from './state.js';
     }
 
     function updateWaveInfoUI() {
-        const nextWave = generateWave(state.waveNumber + 1);
+        let waveNumToShow = state.waveInProgress ? state.waveNumber : state.waveNumber + 1;
+        if (waveNumToShow === 0) waveNumToShow = 1;
+
+        dom.waveInfoTitle.textContent = state.waveInProgress ? '현재 웨이브 정보' : '다음 웨이브 정보';
+
+        const wave = generateWave(waveNumToShow);
         let infoHtml = '';
-        nextWave.monsters.forEach(group => {
+        wave.monsters.forEach(group => {
             const monsterInfo = config.MONSTER_STATS[group.type];
             const hp = Math.floor(monsterInfo.hp * (group.hpMultiplier || 1));
             infoHtml += `<div>- ${monsterInfo.name} x${group.count} (HP: ${hp})</div>`;
