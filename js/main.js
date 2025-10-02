@@ -368,7 +368,12 @@ import { dom, state } from './state.js';
                     const match = specialAbilityFullText.match(/\[(.*?)\]/);
                     if (match && match[1]) {
                         const specialAbilityName = match[1];
-                        infoText += `<br><br><span class="special-ability-span" data-tooltip="${specialAbilityFullText}" style="font-size: 12px; font-weight: bold; color: #61dafb; cursor: help;">Lv.10 특수능력: [${specialAbilityName}]</span>`;
+                        const effectiveDamage = getTowerEffectiveDamage(tower);
+                    let buffText = '';
+                    if (effectiveDamage > tower.damage) {
+                        buffText = ` <span style="color: #4CAF50;">(+${Math.floor(effectiveDamage - tower.damage)})</span>`;
+                    }
+                    infoText += `<br>데미지: ${tower.damage}${buffText}${nextDamageText}`;
                     }
                 }
 
@@ -538,6 +543,11 @@ import { dom, state } from './state.js';
         cell.querySelector('.tower-hp-bar-container').style.display = 'none';
         cell.querySelector('.tower-level').textContent = '';
         cell.querySelector('.cooldown-progress-container').style.display = 'none';
+        const rangeIndicator = cell.querySelector('.tower-range-indicator');
+        if (rangeIndicator) {
+            rangeIndicator.style.width = '0';
+            rangeIndicator.style.height = '0';
+        }
         
         state.towers = state.towers.filter(t => t !== tower);
         updateAllBuffs();
@@ -713,10 +723,8 @@ import { dom, state } from './state.js';
 
     function createDeathEffect(monster) {
         const particleCount = 8;
-        const monsterStyle = config.MONSTER_STYLES[monster.type];
-        let monsterColor = '#9C27B0'; // default normal
-        if (monsterStyle === 'elite') monsterColor = '#FF5722';
-        if (monsterStyle === 'boss') monsterColor = '#212121';
+        const monsterStats = config.MONSTER_STATS[monster.type];
+        const monsterColor = monsterStats.color || '#9C27B0';
 
         for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement('div');
@@ -987,6 +995,9 @@ import { dom, state } from './state.js';
             hpBarContainer: document.createElement('div'), hpBar: document.createElement('div'),
         };
         monster.element.className = 'monster';
+        if (stats.color) {
+            monster.element.style.backgroundColor = stats.color;
+        }
         if (config.MONSTER_STYLES[type]) {
             monster.element.classList.add(config.MONSTER_STYLES[type]);
         }
@@ -1051,7 +1062,12 @@ import { dom, state } from './state.js';
             }
 
             const nextNode = monster.path[monster.pathIndex];
-            const targetTower = state.towers.find(t => t.x === nextNode.x && t.y === nextNode.y);
+            let targetTower = state.towers.find(t => t.x === nextNode.x && t.y === nextNode.y);
+
+            // Ghost monster wall-passing logic
+            if (monster.type === 'ghost' && monster.isPhasing && targetTower && targetTower.type === config.TOWER_TYPES.WALL) {
+                targetTower = null; // Ignore wall, pass through
+            }
             
             if (targetTower) { 
                 monster.attackCooldown -= deltaTime;
@@ -1386,48 +1402,43 @@ import { dom, state } from './state.js';
     }
 
     function repairAllTowers() {
-        if (state.waveInProgress) return;
-        
+        if (state.waveInProgress || state.playerEnergy <= 0) return;
+
         let totalCost = 0;
         let repairedCount = 0;
 
-        const towersToRepair = state.towers
-            .filter(t => t.hp < t.maxHp)
-            .map(t => {
-                const lostHpRatio = (t.maxHp > 0) ? (t.maxHp - t.hp) / t.maxHp : 0;
-                const totalInvested = config.TOWER_COSTS[t.type] + t.totalUpgradeCost;
-                return {
-                    tower: t,
-                    cost: Math.ceil(totalInvested * lostHpRatio)
-                };
-            })
-            .sort((a, b) => a.cost - b.cost);
+        const towersToRepair = state.towers.filter(t => t.hp < t.maxHp);
 
-        if (towersToRepair.length === 0) {
-            updateGlobalButtonsState();
-            return;
-        }
-    
-        for (const item of towersToRepair) {
-            if (state.playerEnergy >= item.cost) {
-                state.playerEnergy -= item.cost;
-                state.totalRepairSpent += item.cost;
-                item.tower.hp = item.tower.maxHp;
-                updateTowerHPBar(item.tower);
-                totalCost += item.cost;
-                repairedCount++;
-            } else {
-                break;
+        for (const tower of towersToRepair) {
+            if (state.playerEnergy <= 0) break;
+
+            const hpToHeal = tower.maxHp - tower.hp;
+            const totalInvested = config.TOWER_COSTS[tower.type] + tower.totalUpgradeCost;
+            const costPerHp = totalInvested / tower.maxHp;
+
+            const hpCanAfford = Math.floor(state.playerEnergy / costPerHp);
+            const hpToActuallyHeal = Math.min(hpToHeal, hpCanAfford);
+
+            if (hpToActuallyHeal > 0) {
+                const actualCost = Math.ceil(hpToActuallyHeal * costPerHp);
+                state.playerEnergy -= actualCost;
+                state.totalRepairSpent += actualCost;
+                tower.hp += hpToActuallyHeal;
+                updateTowerHPBar(tower);
+                totalCost += actualCost;
+                if (tower.hp >= tower.maxHp) {
+                    repairedCount++;
+                }
             }
         }
-    
-        if (repairedCount > 0) {
+
+        if (totalCost > 0) {
             updateUI();
-            showNotification(`⚡${totalCost}를 소모하여 ${repairedCount}개의 타워를 수리했습니다.`);
+            showNotification(`⚡${totalCost}를 소모하여 타워들을 수리했습니다. (${repairedCount}개 완전 수리)`);
         } else {
             showNotification(`에너지가 부족하여 타워를 수리할 수 없습니다.`);
         }
-        
+
         updateGlobalButtonsState();
     }
 

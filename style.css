@@ -115,35 +115,30 @@
             position: absolute;
             width: 28px;
             height: 28px;
-            background-color: #9C27B0;
+            /* background-color is now set by JS */
             border-radius: 50%;
             border: 2px solid #fff;
             box-sizing: border-box;
             z-index: 10;
         }
         .monster.elite {
-            background-color: #FF5722; /* Deep Orange */
             box-shadow: 0 0 8px #FF5722;
         }
         .monster.boss {
-            background-color: #212121;
             border-color: #f44336;
             width: 38px;
             height: 38px;
             box-shadow: 0 0 12px #f44336;
         }
         .monster.slime {
-            background-color: #8BC34A; /* Light Green */
             border-radius: 30%;
         }
         .monster.child-slime {
-            background-color: #CDDC39; /* Lime */
             width: 20px;
             height: 20px;
             border-radius: 30%;
         }
         .monster.ghost {
-            background-color: #E0E0E0; /* Grey */
             opacity: 0.8;
             transition: opacity 0.3s;
         }
