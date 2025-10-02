@@ -25,7 +25,7 @@ export const TOWER_SYMBOLS = {
     [TOWER_TYPES.LASER]: 'L',
     [TOWER_TYPES.MISSILE]: 'M',
     [TOWER_TYPES.BUFF]: 'S',
-    RAILGUN: '💥'
+    [TOWER_TYPES.RAILGUN]: 'R'
 };
 
 export const TOWER_SPECIAL_ABILITIES = {

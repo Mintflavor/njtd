@@ -111,6 +111,24 @@ import { dom, state } from './state.js';
             }
         });
 
+        dom.upgradeInfo.addEventListener('mouseover', (e) => {
+            if (e.target.classList.contains('special-ability-span')) {
+                const tooltipText = e.target.dataset.tooltip;
+                if (tooltipText) {
+                    dom.tooltipEl.innerHTML = tooltipText;
+                    dom.tooltipEl.style.display = 'block';
+                    dom.tooltipEl.style.left = `${e.pageX + 15}px`;
+                    dom.tooltipEl.style.top = `${e.pageY + 15}px`;
+                }
+            }
+        });
+
+        dom.upgradeInfo.addEventListener('mouseout', (e) => {
+            if (e.target.classList.contains('special-ability-span')) {
+                dom.tooltipEl.style.display = 'none';
+            }
+        });
+
         updateUI();
         updateWaveInfoUI();
         updateGlobalButtonsState();
@@ -337,8 +355,14 @@ import { dom, state } from './state.js';
                 }
                 infoText += `<br>처치 수: ${tower.killCount || 0}`;
 
-                if (tower.level === config.MAX_TOWER_LEVEL && config.TOWER_SPECIAL_ABILITIES[tower.type]) {
-                    infoText += `<br><br><span style="font-size: 12px; font-weight: bold; color: #61dafb;">${config.TOWER_SPECIAL_ABILITIES[tower.type]}</span>`;
+                const towerTypeKey = Object.keys(config.TOWER_TYPES).find(key => config.TOWER_TYPES[key] === tower.type);
+                if (tower.level === config.MAX_TOWER_LEVEL && config.TOWER_SPECIAL_ABILITIES[towerTypeKey]) {
+                    const specialAbilityFullText = config.TOWER_SPECIAL_ABILITIES[towerTypeKey];
+                    const match = specialAbilityFullText.match(/\[(.*?)\]/);
+                    if (match && match[1]) {
+                        const specialAbilityName = match[1];
+                        infoText += `<br><br><span class="special-ability-span" data-tooltip="${specialAbilityFullText}" style="font-size: 12px; font-weight: bold; color: #61dafb; cursor: help;">Lv.10 특수능력: [${specialAbilityName}]</span>`;
+                    }
                 }
 
                 const upgradeBtnSpan = upgradeBtn.querySelector('span');
