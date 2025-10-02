@@ -31,7 +31,7 @@ export const state = {
     nodes: [],
     cells: [],
     towers: [],
-    playerEnergy: 50000,
+    playerEnergy: 500,
     playerLives: 20,
     waveNumber: 0,
     playerScore: 0,

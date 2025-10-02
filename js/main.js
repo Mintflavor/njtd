@@ -767,7 +767,7 @@ import { dom, state } from './state.js';
             // Slime splitting logic
             if (monster.type === 'slime') {
                 const spawnOptions1 = {
-                    spawnX: monster.x - 5,
+                    spawnX: monster.x - 15,
                     spawnY: monster.y,
                     pathIndex: monster.pathIndex
                 };
