@@ -204,36 +204,23 @@ import { dom, state } from './state.js';
                 const upgradeCost = Math.floor((config.TOWER_COSTS[tower.type] + tower.totalUpgradeCost) * 0.5);
                 
                 const hpIncrease = Math.floor(config.TOWER_STATS[tower.type].hp * 0.2);
-                infoText += ` → ${Math.floor(tower.maxHp + hpIncrease)}`;
+                const nextHp = Math.min(tower.maxHp + hpIncrease, 500);
+                infoText += ` → ${nextHp}`;
 
-                if (stats.damageUpgrade > 0) {
-                    const currentEffectiveDamage = getTowerEffectiveDamage(tower);
-                    const nextLevelBaseDamage = tower.damage + stats.damageUpgrade;
-                    const nextLevelEffectiveDamage = getTowerEffectiveDamage({ ...tower, damage: nextLevelBaseDamage });
-                    
-                    let damageText;
-                    if (currentEffectiveDamage > tower.damage) {
-                        damageText = `${tower.damage} <span style="color:#4CAF50;">(+${Math.round(currentEffectiveDamage - tower.damage)})</span>`;
-                    } else {
-                        damageText = tower.damage;
-                    }
-                    
-                    let nextDamageText;
-                    if (nextLevelEffectiveDamage > nextLevelBaseDamage) {
-                        nextDamageText = `${nextLevelBaseDamage} <span style="color:#4CAF50;">(+${Math.round(nextLevelEffectiveDamage - nextLevelBaseDamage)})</span>`;
-                    } else {
-                        nextDamageText = nextLevelBaseDamage;
-                    }
+                const baseStats = config.TOWER_STATS[tower.type];
+                if (baseStats.damage > 0) {
+                    const nextDamage = Math.floor(tower.damage * 1.2);
+                    infoText += `<br>데미지: ${tower.damage} → ${nextDamage}`;
+                }
 
-                    let upgradeText = `<br>데미지: ${damageText} → ${nextDamageText}`;
-                    if (tower.type === config.TOWER_TYPES.RAILGUN) {
-                         upgradeText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s → ${( (tower.attackSpeed - 300) / 1000).toFixed(1)}s`;
-                    } else if (tower.type === config.TOWER_TYPES.MISSILE) {
-                        upgradeText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s → ${( (tower.attackSpeed - 100) / 1000).toFixed(1)}s`;
-                    }
-                    infoText += upgradeText;
+                if (tower.type === config.TOWER_TYPES.MISSILE) {
+                    const nextAoe = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.2);
+                    infoText += `<br>광역 데미지: ${tower.aoeDamage || baseStats.aoeDamage} → ${nextAoe}`;
+                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s → ${((tower.attackSpeed - 100) / 1000).toFixed(1)}s`;
+                } else if (tower.type === config.TOWER_TYPES.RAILGUN) {
+                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s → ${((tower.attackSpeed - 300) / 1000).toFixed(1)}s`;
                 } else if (tower.type === config.TOWER_TYPES.BUFF) {
-                    infoText += `<br>버프 증폭: x${(tower.buffMultiplier || config.TOWER_STATS[config.TOWER_TYPES.BUFF].buffMultiplier).toFixed(1)} → x${((tower.buffMultiplier || config.TOWER_STATS[config.TOWER_TYPES.BUFF].buffMultiplier) + 0.2).toFixed(1)}`;
+                    infoText += `<br>버프 증폭: x${(tower.buffMultiplier || baseStats.buffMultiplier).toFixed(1)} → x${((tower.buffMultiplier || baseStats.buffMultiplier) + 0.2).toFixed(1)}`;
                 }
                 infoText += `<br>처치 수: ${tower.killCount || 0}`;
 
@@ -242,6 +229,8 @@ import { dom, state } from './state.js';
                 if (tower.level >= config.MAX_TOWER_LEVEL) {
                     upgradeBtn.disabled = true;
                     upgradeBtnSpan.textContent = `MAX`;
+                    const levelDisplay = state.cells[tower.y][tower.x].querySelector('.tower-level');
+                    if(levelDisplay) levelDisplay.textContent = '👑';
                 } else {
                     upgradeBtn.disabled = state.playerEnergy < upgradeCost || state.waveInProgress;
                     upgradeBtnSpan.textContent = `⚡${upgradeCost}`;
@@ -278,24 +267,37 @@ import { dom, state } from './state.js';
                     tower.totalUpgradeCost += upgradeCost;
                     tower.level++;
                     
-                    if (config.TOWER_STATS[tower.type].damageUpgrade > 0) {
-                        tower.damage += config.TOWER_STATS[tower.type].damageUpgrade;
+                    const baseStats = config.TOWER_STATS[tower.type];
+
+                    // Damage upgrade (compounding 20%)
+                    if (baseStats.damage > 0) {
+                        tower.damage = Math.floor(tower.damage * 1.2);
                     }
-                    
-                    const hpIncrease = Math.floor(config.TOWER_STATS[tower.type].hp * 0.2);
-                    tower.maxHp += hpIncrease;
-                    tower.hp += hpIncrease;
+
+                    // HP upgrade (cap at 500)
+                    const hpIncrease = Math.floor(baseStats.hp * 0.2);
+                    const newMaxHp = tower.maxHp + hpIncrease;
+                    tower.maxHp = Math.min(newMaxHp, 500);
+                    tower.hp = tower.maxHp; // Full heal on upgrade
                     updateTowerHPBar(tower);
 
+                    // Special upgrades
                     if (tower.type === config.TOWER_TYPES.MISSILE) {
-                        tower.aoeDamage += Math.floor(config.TOWER_STATS[tower.type].aoeDamage * 0.2);
+                        tower.aoeDamage = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.2);
                         tower.attackSpeed -= 100;
                     } else if (tower.type === config.TOWER_TYPES.RAILGUN) {
                         tower.attackSpeed -= 300;
                     } else if (tower.type === config.TOWER_TYPES.BUFF) {
-                        tower.buffMultiplier = (tower.buffMultiplier || config.TOWER_STATS[config.TOWER_TYPES.BUFF].buffMultiplier) + 0.2;
+                        tower.buffMultiplier = (tower.buffMultiplier || baseStats.buffMultiplier) + 0.2;
                     }
-                    state.cells[y][x].querySelector('.tower-level').textContent = `L${tower.level}`;
+
+                    // Update level display
+                    const levelDisplay = state.cells[y][x].querySelector('.tower-level');
+                    if (tower.level === config.MAX_TOWER_LEVEL) {
+                        levelDisplay.textContent = '👑';
+                    } else {
+                        levelDisplay.textContent = `L${tower.level}`;
+                    }
                 }
             }
         } else if (action === 'repair') {
@@ -1137,22 +1139,36 @@ import { dom, state } from './state.js';
                 tower.totalUpgradeCost += item.cost;
                 tower.level++;
                 
-                if (config.TOWER_STATS[tower.type].damageUpgrade > 0) {
-                    tower.damage += config.TOWER_STATS[tower.type].damageUpgrade;
+                const baseStats = config.TOWER_STATS[tower.type];
+
+                // Damage upgrade (compounding 20%)
+                if (baseStats.damage > 0) {
+                    tower.damage = Math.floor(tower.damage * 1.2);
                 }
-                
-                const hpIncrease = Math.floor(config.TOWER_STATS[tower.type].hp * 0.2);
-                tower.maxHp += hpIncrease;
-                tower.hp += hpIncrease;
+
+                // HP upgrade (cap at 500)
+                const hpIncrease = Math.floor(baseStats.hp * 0.2);
+                const newMaxHp = tower.maxHp + hpIncrease;
+                tower.maxHp = Math.min(newMaxHp, 500);
+                tower.hp = tower.maxHp; // Full heal on upgrade
                 updateTowerHPBar(tower);
 
+                // Special upgrades
                 if (tower.type === config.TOWER_TYPES.MISSILE) {
-                    tower.aoeDamage += Math.floor(config.TOWER_STATS[tower.type].aoeDamage * 0.2);
+                    tower.aoeDamage = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.2);
                     tower.attackSpeed -= 100;
                 } else if (tower.type === config.TOWER_TYPES.RAILGUN) {
                     tower.attackSpeed -= 300;
+                } else if (tower.type === config.TOWER_TYPES.BUFF) {
+                    tower.buffMultiplier = (tower.buffMultiplier || baseStats.buffMultiplier) + 0.2;
                 }
-                state.cells[tower.y][tower.x].querySelector('.tower-level').textContent = `L${tower.level}`;
+                
+                const levelDisplay = state.cells[tower.y][tower.x].querySelector('.tower-level');
+                if (tower.level === config.MAX_TOWER_LEVEL) {
+                    levelDisplay.textContent = '👑';
+                } else {
+                    levelDisplay.textContent = `L${tower.level}`;
+                }
                 
                 const towerName = config.TOWER_STATS[tower.type].name;
                 upgradedCounts[towerName] = (upgradedCounts[towerName] || 0) + 1;

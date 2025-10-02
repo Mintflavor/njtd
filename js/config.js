@@ -2,7 +2,7 @@ export const GRID_WIDTH = 15, GRID_HEIGHT = 10, CELL_SIZE = 40;
 export const START_NODE = { x: 0, y: GRID_HEIGHT - 1 };
 export let END_NODE = { x: GRID_WIDTH - 1, y: 0 };
 export const TOWER_TYPES = { EMPTY: 0, WALL: 1, CANNON: 2, LASER: 3, MISSILE: 4, BUFF: 5, RAILGUN: 6 };
-export const MAX_TOWER_LEVEL = 5;
+export const MAX_TOWER_LEVEL = 10;
 export const TOWER_COSTS = { 
     [TOWER_TYPES.WALL]: 20, 
     [TOWER_TYPES.CANNON]: 100,
@@ -36,12 +36,12 @@ export const TOWER_SUMMARIES = {
     [TOWER_TYPES.RAILGUN]: "일직선 상의 모든 적을 관통하는 강력한 공격을 합니다."
 };
 export const TOWER_STATS = {
-    [TOWER_TYPES.WALL]: { name: "벽", hp: 500, range: 0, damage: 0, attackSpeed: 0, damageUpgrade: 0 },
-    [TOWER_TYPES.CANNON]: { name: "캐논", hp: 250, range: 1.5 * CELL_SIZE, damage: 30, attackSpeed: 1000, damageUpgrade: 15 },
-    [TOWER_TYPES.LASER]: { name: "레이저", hp: 200, range: 1.5 * CELL_SIZE, damage: 15, attackSpeed: 300, damageUpgrade: 5 },
-    [TOWER_TYPES.MISSILE]: { name: "미사일", hp: 300, range: 2.5 * CELL_SIZE, damage: 75, attackSpeed: 2500, aoeRadius: 1.5 * CELL_SIZE, aoeDamage: 60, damageUpgrade: 50 },
-    [TOWER_TYPES.BUFF]: { name: "버프 타워", hp: 150, range: 2.5 * CELL_SIZE, damage: 0, attackSpeed: 0, damageUpgrade: 0, buffMultiplier: 1.5 },
-    [TOWER_TYPES.RAILGUN]: { name: "레일건", hp: 100, range: 4.5 * CELL_SIZE, damage: 500, attackSpeed: 4000, damageUpgrade: 100 }
+    [TOWER_TYPES.WALL]: { name: "벽", hp: 500, range: 0, damage: 0, attackSpeed: 0 },
+    [TOWER_TYPES.CANNON]: { name: "캐논", hp: 250, range: 1.5 * CELL_SIZE, damage: 30, attackSpeed: 1000 },
+    [TOWER_TYPES.LASER]: { name: "레이저", hp: 200, range: 1.5 * CELL_SIZE, damage: 15, attackSpeed: 300 },
+    [TOWER_TYPES.MISSILE]: { name: "미사일", hp: 300, range: 2.5 * CELL_SIZE, damage: 75, attackSpeed: 2500, aoeRadius: 1.5 * CELL_SIZE, aoeDamage: 60 },
+    [TOWER_TYPES.BUFF]: { name: "버프 타워", hp: 150, range: 2.5 * CELL_SIZE, damage: 0, attackSpeed: 0, buffMultiplier: 1.5 },
+    [TOWER_TYPES.RAILGUN]: { name: "레일건", hp: 100, range: 4.5 * CELL_SIZE, damage: 500, attackSpeed: 4000 }
 };
 export const MONSTER_STATS = {
     normal: { name: '일반', hp: 75, speed: 50, damage: 20, attackSpeed: 1000, livesCost: 1 },
