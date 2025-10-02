@@ -209,12 +209,13 @@ import { dom, state } from './state.js';
 
                 const baseStats = config.TOWER_STATS[tower.type];
                 if (baseStats.damage > 0) {
-                    const nextDamage = Math.floor(tower.damage * 1.2);
+                    const multiplier = [config.TOWER_TYPES.CANNON, config.TOWER_TYPES.LASER, config.TOWER_TYPES.MISSILE].includes(tower.type) ? 1.3 : 1.2;
+                    const nextDamage = Math.floor(tower.damage * multiplier);
                     infoText += `<br>데미지: ${tower.damage} → ${nextDamage}`;
                 }
 
                 if (tower.type === config.TOWER_TYPES.MISSILE) {
-                    const nextAoe = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.2);
+                    const nextAoe = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.3);
                     infoText += `<br>광역 데미지: ${tower.aoeDamage || baseStats.aoeDamage} → ${nextAoe}`;
                     infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s → ${((tower.attackSpeed - 100) / 1000).toFixed(1)}s`;
                 } else if (tower.type === config.TOWER_TYPES.RAILGUN) {
@@ -269,9 +270,10 @@ import { dom, state } from './state.js';
                     
                     const baseStats = config.TOWER_STATS[tower.type];
 
-                    // Damage upgrade (compounding 20%)
+                    // Damage upgrade (compounding)
                     if (baseStats.damage > 0) {
-                        tower.damage = Math.floor(tower.damage * 1.2);
+                        const multiplier = [config.TOWER_TYPES.CANNON, config.TOWER_TYPES.LASER, config.TOWER_TYPES.MISSILE].includes(tower.type) ? 1.3 : 1.2;
+                        tower.damage = Math.floor(tower.damage * multiplier);
                     }
 
                     // HP upgrade (cap at 500)
@@ -283,7 +285,7 @@ import { dom, state } from './state.js';
 
                     // Special upgrades
                     if (tower.type === config.TOWER_TYPES.MISSILE) {
-                        tower.aoeDamage = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.2);
+                        tower.aoeDamage = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.3);
                         tower.attackSpeed -= 100;
                     } else if (tower.type === config.TOWER_TYPES.RAILGUN) {
                         tower.attackSpeed -= 300;
@@ -1141,9 +1143,10 @@ import { dom, state } from './state.js';
                 
                 const baseStats = config.TOWER_STATS[tower.type];
 
-                // Damage upgrade (compounding 20%)
+                // Damage upgrade (compounding)
                 if (baseStats.damage > 0) {
-                    tower.damage = Math.floor(tower.damage * 1.2);
+                    const multiplier = [config.TOWER_TYPES.CANNON, config.TOWER_TYPES.LASER, config.TOWER_TYPES.MISSILE].includes(tower.type) ? 1.3 : 1.2;
+                    tower.damage = Math.floor(tower.damage * multiplier);
                 }
 
                 // HP upgrade (cap at 500)
@@ -1155,7 +1158,7 @@ import { dom, state } from './state.js';
 
                 // Special upgrades
                 if (tower.type === config.TOWER_TYPES.MISSILE) {
-                    tower.aoeDamage = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.2);
+                    tower.aoeDamage = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.3);
                     tower.attackSpeed -= 100;
                 } else if (tower.type === config.TOWER_TYPES.RAILGUN) {
                     tower.attackSpeed -= 300;
