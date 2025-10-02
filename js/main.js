@@ -173,12 +173,19 @@ import { dom, state } from './state.js';
             const nextWaveNum = state.waveNumber < 1 ? 1 : state.waveNumber + 1;
             const hpMultiplier = Math.pow(1.2, nextWaveNum - 1);
             Object.values(config.MONSTER_STATS).forEach(stats => {
+                html += `<div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #444;">`;
                 html += `<h4>${stats.name}</h4>`;
-                let infoText = `<p>HP: ${Math.floor(stats.hp * hpMultiplier)}<br>이동 속도: ${stats.speed}<br>공격력: ${stats.damage}<br>공격 속도: ${stats.attackSpeed/1000}초<br>`;
-                if (stats.aoeAuraDamage) {
-                    infoText += `광역 데미지: ${stats.aoeAuraDamage}<br>`;
+                if (stats.description) {
+                    html += `<p style="font-style: italic; color: #ccc; margin-top: -10px;">${stats.description}</p>`;
                 }
-                infoText += `생명력 피해: ${stats.livesCost}</p>`;
+                let infoText = `<p>HP: ${Math.floor(stats.hp * hpMultiplier)} | 이동 속도: ${stats.speed} | 생명력 피해: ${stats.livesCost}<br>`;
+                if (stats.damage > 0) {
+                    infoText += `공격력: ${stats.damage} | 공격 속도: ${stats.attackSpeed/1000}초<br>`;
+                }
+                if (stats.aoeAuraDamage) {
+                    infoText += `광역 오라 데미지: ${stats.aoeAuraDamage}<br>`;
+                }
+                infoText += `</p></div>`;
                 html += infoText;
             });
         }
@@ -735,8 +742,19 @@ import { dom, state } from './state.js';
     }
 
     function damageMonster(monster, damage, sourceTower = null) {
-        if(monster.hp <= 0) return;
-        
+        if (monster.hp <= 0) return;
+
+        // Ghost monster immunity and vulnerability
+        if (monster.type === 'ghost' && monster.isPhasing && sourceTower) {
+            const towerType = sourceTower.type;
+            if (towerType === config.TOWER_TYPES.CANNON || towerType === config.TOWER_TYPES.MISSILE) {
+                return; // Immune to physical
+            }
+            if (towerType === config.TOWER_TYPES.LASER || towerType === config.TOWER_TYPES.RAILGUN) {
+                damage *= 1.5; // 50% extra damage from energy
+            }
+        }
+
         const damageDealt = Math.min(monster.hp, damage);
         state.totalDamageDealt += damageDealt;
         monster.hp -= damage;
@@ -745,10 +763,27 @@ import { dom, state } from './state.js';
             if (sourceTower) {
                 sourceTower.killCount = (sourceTower.killCount || 0) + 1;
             }
+
+            // Slime splitting logic
+            if (monster.type === 'slime') {
+                const spawnOptions1 = {
+                    spawnX: monster.x - 5,
+                    spawnY: monster.y,
+                    pathIndex: monster.pathIndex
+                };
+                createMonster('child_slime', 1, monster.path, spawnOptions1);
+                const spawnOptions2 = {
+                    spawnX: monster.x + 5,
+                    spawnY: monster.y,
+                    pathIndex: monster.pathIndex
+                };
+                createMonster('child_slime', 1, monster.path, spawnOptions2);
+            }
+
             const energyReward = 10 + (state.waveNumber - 1) * 3;
             state.playerEnergy += energyReward;
             state.totalEnergyEarned += energyReward;
-            
+
             const baseScore = monster.type === 'boss' ? 500 : (monster.type === 'elite' ? 20 : 10);
             const scoreMultiplier = Math.pow(1.05, state.waveNumber - 1);
             state.playerScore += Math.floor(baseScore * scoreMultiplier);
@@ -831,6 +866,16 @@ import { dom, state } from './state.js';
             if (waveNum > 0 && waveNum % 5 === 0) {
                 const eliteCount = Math.floor(waveNum / 5);
                 waveConfig.monsters.push({ type: 'elite', count: eliteCount, hpMultiplier: hpMultiplier });
+            }
+
+            if (waveNum >= 8) {
+                const slimeCount = Math.floor(waveNum / 4);
+                waveConfig.monsters.push({ type: 'slime', count: slimeCount, hpMultiplier: hpMultiplier });
+            }
+
+            if (waveNum >= 15) {
+                const ghostCount = Math.floor(waveNum / 5);
+                waveConfig.monsters.push({ type: 'ghost', count: ghostCount, hpMultiplier: hpMultiplier });
             }
         }
         return waveConfig;
@@ -921,15 +966,16 @@ import { dom, state } from './state.js';
         });
     }
     
-    function createMonster(type, hpMultiplier = 1, path) {
+    function createMonster(type, hpMultiplier = 1, path, options = {}) {
+        const { spawnX, spawnY, pathIndex = 1 } = options;
         const stats = config.MONSTER_STATS[type];
         const monster = {
             id: state.monsterIdCounter++,
             type: type,
             path: path,
-            pathIndex: 1,
-            x: config.START_NODE.x * config.CELL_SIZE + config.CELL_SIZE / 2,
-            y: config.START_NODE.y * config.CELL_SIZE + config.CELL_SIZE / 2,
+            pathIndex: pathIndex,
+            x: spawnX !== undefined ? spawnX : config.START_NODE.x * config.CELL_SIZE + config.CELL_SIZE / 2,
+            y: spawnY !== undefined ? spawnY : config.START_NODE.y * config.CELL_SIZE + config.CELL_SIZE / 2,
             maxHp: stats.hp * hpMultiplier,
             hp: stats.hp * hpMultiplier,
             speed: stats.speed,
@@ -952,6 +998,10 @@ import { dom, state } from './state.js';
             aura.style.height = `${stats.aoeAuraRange * 2}px`;
             monster.auraElement = aura;
             monster.element.appendChild(aura);
+        }
+        if (type === 'ghost') {
+            monster.isPhasing = false;
+            monster.phaseTimer = stats.materializedDuration;
         }
         monster.hpBarContainer.className = 'monster-hp-bar-container';
         monster.hpBar.className = 'monster-hp-bar';
@@ -986,6 +1036,17 @@ import { dom, state } from './state.js';
                         }
                     });
                     monster.aoeAuraCooldown = stats.aoeAuraSpeed;
+                }
+            }
+
+            // Ghost monster phasing
+            if (monster.type === 'ghost') {
+                monster.phaseTimer -= deltaTime;
+                if (monster.phaseTimer <= 0) {
+                    monster.isPhasing = !monster.isPhasing;
+                    const stats = config.MONSTER_STATS.ghost;
+                    monster.phaseTimer = monster.isPhasing ? stats.phaseDuration : stats.materializedDuration;
+                    monster.element.classList.toggle('phasing', monster.isPhasing);
                 }
             }
 
@@ -1315,7 +1376,8 @@ import { dom, state } from './state.js';
             }
         });
 
-        if (state.waveNumber > 0 && state.waveNumber % 5 === 0) {
+        // Shuffle monsters for more variety
+        if (state.monstersToSpawn.length > 1) {
             for (let i = state.monstersToSpawn.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [state.monstersToSpawn[i], state.monstersToSpawn[j]] = [state.monstersToSpawn[j], state.monstersToSpawn[i]];
@@ -1561,12 +1623,12 @@ import { dom, state } from './state.js';
         const gameOverContent = dom.gameOverlay.querySelector('div');
         const p = gameOverContent.querySelector('p');
         const details = `
-            최종 점수: ${state.score.toLocaleString()}<br>
+            최종 점수: ${state.playerScore.toLocaleString()}<br>
             도달한 웨이브: ${state.waveNumber}<br>
             총 누적 데미지: ${state.totalDamageDealt.toLocaleString()}<br>
             총 타워 설치 비용: ${state.totalBuildSpent.toLocaleString()}<br>
             총 타워 업그레이드 비용: ${state.totalUpgradeSpent.toLocaleString()}<br>
-            처치한 몬스터: ${state.totalKills.toLocaleString()}
+            처치한 몬스터: ${state.monstersKilled.toLocaleString()}
         `;
         p.innerHTML = details;
         dom.gameOverlay.style.display = 'flex';

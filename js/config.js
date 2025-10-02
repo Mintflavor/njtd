@@ -52,12 +52,18 @@ export const TOWER_STATS = {
     [TOWER_TYPES.RAILGUN]: { name: "레일건", hp: 100, range: 4.5 * CELL_SIZE, damage: 500, attackSpeed: 4000 }
 };
 export const MONSTER_STATS = {
-    normal: { name: '일반', hp: 75, speed: 50, damage: 20, attackSpeed: 1000, livesCost: 1 },
-    elite: { name: '특수', hp: 250, speed: 30, damage: 50, attackSpeed: 900, livesCost: 3, aoeAuraRange: 1.5 * CELL_SIZE, aoeAuraDamage: 10, aoeAuraSpeed: 900 },
-    boss: { name: '보스', hp: 1000, speed: 15, damage: 500, attackSpeed: 1500, livesCost: 999 }
+    normal: { name: '일반', hp: 75, speed: 50, damage: 20, attackSpeed: 1000, livesCost: 1, description: '가장 기본적인 몬스터입니다.' },
+    elite: { name: '특수', hp: 250, speed: 30, damage: 50, attackSpeed: 900, livesCost: 3, aoeAuraRange: 1.5 * CELL_SIZE, aoeAuraDamage: 10, aoeAuraSpeed: 900, description: '주변 타워에 지속적인 광역 피해를 주는 오라를 가집니다.' },
+    boss: { name: '보스', hp: 1000, speed: 15, damage: 500, attackSpeed: 1500, livesCost: 999, description: '매 10 웨이브마다 등장하는 강력한 보스입니다. 처치 시 추가 보상을 얻습니다.' },
+    slime: { name: '슬라임', hp: 200, speed: 30, damage: 10, attackSpeed: 1000, livesCost: 2, description: '죽을 때 두 마리의 새끼 슬라임으로 분열합니다. 광역 공격에 약합니다.' },
+    child_slime: { name: '새끼 슬라임', hp: 100, speed: 40, damage: 5, attackSpeed: 1000, livesCost: 1, description: '슬라임이 분열하여 생성된 작은 몬스터입니다.' },
+    ghost: { name: '유령', hp: 180, speed: 50, damage: 15, attackSpeed: 1000, livesCost: 3, phaseDuration: 3000, materializedDuration: 3000, description: '주기적으로 유체화하여 물리 공격에 면역이 됩니다. 에너지 공격에 약합니다.' }
 };
 export const MONSTER_STYLES = {
     normal: '',
     elite: 'elite',
-    boss: 'boss'
+    boss: 'boss',
+    slime: 'slime',
+    child_slime: 'child-slime',
+    ghost: 'ghost'
 };

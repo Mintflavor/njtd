@@ -132,6 +132,30 @@
             height: 38px;
             box-shadow: 0 0 12px #f44336;
         }
+        .monster.slime {
+            background-color: #8BC34A; /* Light Green */
+            border-radius: 30%;
+        }
+        .monster.child-slime {
+            background-color: #CDDC39; /* Lime */
+            width: 20px;
+            height: 20px;
+            border-radius: 30%;
+        }
+        .monster.ghost {
+            background-color: #E0E0E0; /* Grey */
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        .monster.ghost.phasing {
+            opacity: 0.2;
+            animation: flicker 0.5s infinite alternate;
+        }
+
+        @keyframes flicker {
+            from { box-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #61dafb; }
+            to { box-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #61dafb; }
+        }
         .monster-aura {
             position: absolute;
             top: 50%;
