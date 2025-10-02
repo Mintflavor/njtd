@@ -269,6 +269,8 @@ import { dom, state } from './state.js';
             const tower = state.towers.find(t => t.x === x && t.y === y);
             if (!tower) return; 
 
+            let infoText;
+
             dom.demolishOption.style.display = 'block';
             const refund = Math.floor((config.TOWER_COSTS[existingTowerType] + tower.totalUpgradeCost) * 0.7);
             dom.demolishOption.querySelector('span').textContent = `+⚡${refund}`;
@@ -356,6 +358,7 @@ import { dom, state } from './state.js';
                 }
             } else {
                 upgradeBtn.style.display = 'none';
+                infoText = `<strong>${stats.name}</strong><br>HP: ${Math.floor(tower.hp)} / ${tower.maxHp}`;
                 infoText += `<br>업그레이드 불가`;
             }
             dom.upgradeInfo.innerHTML = infoText;
