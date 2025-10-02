@@ -206,6 +206,7 @@ import { dom, state } from './state.js';
                                 <th style="padding: 8px; border-bottom: 1px solid #61dafb;">HP</th>
                                 <th style="padding: 8px; border-bottom: 1px solid #61dafb;">데미지</th>
                                 <th style="padding: 8px; border-bottom: 1px solid #61dafb;">공격속도(초)</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #61dafb;">업그레이드 비용</th>
                                 <th style="padding: 8px; border-bottom: 1px solid #61dafb;">부가능력</th>
                             </tr>
                         </thead>
@@ -213,8 +214,11 @@ import { dom, state } from './state.js';
 
         let currentDamage = baseStats.damage;
         let currentAoeDamage = baseStats.aoeDamage;
+        let totalInvestedCost = config.TOWER_COSTS[towerType];
 
         for (let level = 1; level <= config.MAX_TOWER_LEVEL; level++) {
+            const upgradeCost = Math.floor(totalInvestedCost * 0.5);
+
             if (level > 1) {
                 const multiplier = ['CANNON', 'LASER', 'MISSILE'].includes(towerKey) ? 1.3 : 1.2;
                 if (baseStats.damage > 0) {
@@ -241,8 +245,13 @@ import { dom, state } from './state.js';
                             <td style="padding: 8px; border-bottom: 1px solid #444;">${currentHp}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #444;">${currentDamage > 0 ? currentDamage : '-'}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #444;">${currentAttackSpeed > 0 ? (currentAttackSpeed / 1000).toFixed(2) : '-'}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #444;">${level < config.MAX_TOWER_LEVEL ? '⚡' + upgradeCost : '-'}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #444;">${specialText}</td>
                           </tr>`;
+            
+            if (level < config.MAX_TOWER_LEVEL) {
+                totalInvestedCost += upgradeCost;
+            }
         }
 
         tableHtml += `</tbody></table>`;
@@ -826,7 +835,8 @@ import { dom, state } from './state.js';
                 createMonster('child_slime', 1, monster.path, spawnOptions2);
             }
 
-            const energyReward = 10 + (state.waveNumber - 1) * 3;
+            // 몬스터 처치 시 에너지 리워드
+            const energyReward = 10 + (state.waveNumber - 1) * 5;
             state.playerEnergy += energyReward;
             state.totalEnergyEarned += energyReward;
 
@@ -837,7 +847,8 @@ import { dom, state } from './state.js';
 
             if (monster.type === 'boss') {
                 state.playerLives = Math.min(20, state.playerLives + 5);
-                const bossEnergyBonus = state.waveNumber * 100;
+                // 보스 처치 시 보너스 에너지 리워드
+                const bossEnergyBonus = state.waveNumber * 200;
                 state.playerEnergy += bossEnergyBonus;
                 state.totalEnergyEarned += bossEnergyBonus;
                 showNotification(`보스 처치! 생명력 5와 ⚡${bossEnergyBonus} 에너지를 획득했습니다.`);
@@ -867,6 +878,11 @@ import { dom, state } from './state.js';
     function getTowerEffectiveAttackSpeed(tower) {
         let attackSpeed = tower.attackSpeed;
         
+        // Max level Cannon special ability
+        if (tower.type === config.TOWER_TYPES.CANNON && tower.level === config.MAX_TOWER_LEVEL) {
+            attackSpeed /= 2;
+        }
+
         // Dual-Effect for max level Buff Tower
         const buffTowersInRange = state.towers.filter(b => 
             b.type === config.TOWER_TYPES.BUFF && 
