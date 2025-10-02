@@ -47,7 +47,7 @@ export const TOWER_STATS = {
     [TOWER_TYPES.WALL]: { name: "벽", hp: 500, range: 0, damage: 0, attackSpeed: 0 },
     [TOWER_TYPES.CANNON]: { name: "캐논", hp: 250, range: 1.5 * CELL_SIZE, damage: 30, attackSpeed: 1000 },
     [TOWER_TYPES.LASER]: { name: "레이저", hp: 200, range: 1.5 * CELL_SIZE, damage: 15, attackSpeed: 300 },
-    [TOWER_TYPES.MISSILE]: { name: "미사일", hp: 300, range: 2.5 * CELL_SIZE, damage: 75, attackSpeed: 2500, aoeRadius: 1.5 * CELL_SIZE, aoeDamage: 60 },
+    [TOWER_TYPES.MISSILE]: { name: "미사일", hp: 300, range: 2.5 * CELL_SIZE, damage: 75, attackSpeed: 2500, aoeRadius: 1 * CELL_SIZE, aoeDamage: 60 },
     [TOWER_TYPES.BUFF]: { name: "버프 타워", hp: 150, range: 2.5 * CELL_SIZE, damage: 0, attackSpeed: 0, buffMultiplier: 1.5 },
     [TOWER_TYPES.RAILGUN]: { name: "레일건", hp: 100, range: 4.5 * CELL_SIZE, damage: 500, attackSpeed: 4000 }
 };
