@@ -14,55 +14,56 @@
     <div class="game-content">
         <div class="version-container">
             <p>매 웨이브마다 몬스터의 도착 지점이 바뀝니다. 변화하는 경로를 예측하고 타워를 전략적으로 배치하여 완벽한 방어선을 구축하세요!</p>
-            <div class="game-wrapper-v2">
-                <div class="game-container">
-                    <div id="game-board-v2" class="game-board">
-                        <div id="path-arrows-container"></div>
-                    </div>
-                </div>
-                <div class="ui-panel">
-                    <div class="top-controls">
-                        <button id="start-wave-btn-v2">Start Wave</button>
-                        <button id="game-speed-btn">Speed: 1x</button>
-                    </div>
-
-                    <h2>플레이어 정보</h2>
-                    <div class="status-grid">
-                        <div id="energy-display-v2" class="energy-display">⚡<span>500</span></div>
-                        <div id="lives-display-v2" class="lives-display">❤️<span>20</span></div>
-                        <div id="wave-display-v2" class="wave-display">🌊<span>Wave 0</span></div>
-                        <div id="score-display-v2" class="score-display">🏆<span>0</span></div>
-                    </div>
-
-                    <h2>게임 정보</h2>
-                    <div class="info-buttons">
-                        <button id="tower-info-btn">타워 정보</button>
-                        <button id="monster-info-btn">몬스터 정보</button>
-                    </div>
-                    
-                    <div id="wave-info-panel" style="margin-top: 20px;">
-                        <h2 id="wave-info-title">다음 웨이브 정보</h2>
-                        <div id="wave-info-box" style="font-size: 14px; line-height: 1.6; background-color: #282c34; padding: 10px; border-radius: 5px; min-height: 50px;">
-                            <!-- Monster info will be populated by JS -->
+                    <div class="game-wrapper-v2">
+                        <div class="left-panel">
+                            <div class="game-container">
+                                <div id="game-board-v2" class="game-board">
+                                    <div id="path-arrows-container"></div>
+                                </div>
+                            </div>
+                            <div id="action-history-container">
+                                <div class="history-header">
+                                    <h3>이번 웨이브 기록</h3>
+                                    <button id="undo-btn" disabled>UNDO</button>
+                                </div>
+                                <div id="action-log">
+                                    <p>수행한 작업이 없습니다.</p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-                <div class="global-actions">
-                    <button id="repair-all-btn">전체 수리</button>
-                    <button id="upgrade-all-btn">전체 업그레이드</button>
-                </div>
-            </div>
-
-            <div id="action-history-container">
-                <div class="history-header">
-                    <h3>이번 웨이브 기록</h3>
-                    <button id="undo-btn" disabled>UNDO</button>
-                </div>
-                <div id="action-log">
-                    <p>수행한 작업이 없습니다.</p>
-                </div>
-            </div>
-        </div>
+                        <div class="ui-panel">
+                            <div class="top-controls">
+                                <button id="start-wave-btn-v2">Start Wave</button>
+                                <button id="game-speed-btn">Speed: 1x</button>
+                            </div>
+            
+                            <h2>플레이어 정보</h2>
+                            <div class="status-grid">
+                                <div id="energy-display-v2" class="energy-display">⚡<span>500</span></div>
+                                <div id="lives-display-v2" class="lives-display">❤️<span>20</span></div>
+                                <div id="wave-display-v2" class="wave-display">🌊<span>Wave 0</span></div>
+                                <div id="score-display-v2" class="score-display">🏆<span>0</span></div>
+                            </div>
+            
+                            <h2>게임 정보</h2>
+                            <div class="info-buttons">
+                                <button id="tower-info-btn">타워 정보</button>
+                                <button id="monster-info-btn">몬스터 정보</button>
+                            </div>
+                            
+                            <div id="wave-info-panel" style="margin-top: 20px;">
+                                <h2 id="wave-info-title">다음 웨이브 정보</h2>
+                                <div id="wave-info-box" style="font-size: 14px; line-height: 1.6; background-color: #282c34; padding: 10px; border-radius: 5px; min-height: 50px;">
+                                    <!-- Monster info will be populated by JS -->
+                                </div>
+                            </div>
+            
+                            <div class="global-actions">
+                                <button id="repair-all-btn">전체 수리</button>
+                                <button id="upgrade-all-btn">전체 업그레이드</button>
+                            </div>
+                        </div>
+                    </div>        </div>
     </div>
     
     <div id="placement-menu-v2" class="placement-menu">
