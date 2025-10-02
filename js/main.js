@@ -1287,6 +1287,7 @@ import { dom, state } from './state.js';
         }
         if (state.monstersToSpawn.length === 0 && state.monsters.length === 0 && state.waveInProgress) {
             state.waveInProgress = false;
+            dom.startWaveBtn.disabled = false;
 
             state.actionHistory = [];
             updateActionLogUI();
@@ -1476,6 +1477,7 @@ import { dom, state } from './state.js';
 
     function startWave() {
         if (state.waveInProgress) return;
+        dom.startWaveBtn.disabled = true;
         state.waveInProgress = true;
         dom.undoBtn.disabled = true;
         updateGlobalButtonsState();
@@ -1792,7 +1794,7 @@ import { dom, state } from './state.js';
             dom.actionLog.innerHTML = '<p>수행한 작업이 없습니다.</p>';
             dom.undoBtn.disabled = true;
         } else {
-            dom.actionLog.innerHTML = state.actionHistory.map(action => `<p>${action.description}</p>`).join('');
+            dom.actionLog.innerHTML = state.actionHistory.map((action, index) => `<p>${index + 1}. ${action.description}</p>`).join('');
             dom.actionLog.scrollTop = dom.actionLog.scrollHeight;
             dom.undoBtn.disabled = state.waveInProgress;
         }
