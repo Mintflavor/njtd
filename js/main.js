@@ -1610,6 +1610,7 @@ import { dom, state } from './state.js';
     }
     
     function gameOver() {
+        state.waveInProgress = false; // Stop game logic
         const towerCounts = state.towers.reduce((acc, tower) => {
             const name = config.TOWER_STATS[tower.type].name;
             acc[name] = (acc[name] || 0) + 1;
@@ -1621,16 +1622,28 @@ import { dom, state } from './state.js';
             .join('<br>');
 
         const gameOverContent = dom.gameOverlay.querySelector('div');
-        const p = gameOverContent.querySelector('p');
-        const details = `
-            최종 점수: ${state.playerScore.toLocaleString()}<br>
-            도달한 웨이브: ${state.waveNumber}<br>
-            총 누적 데미지: ${state.totalDamageDealt.toLocaleString()}<br>
-            총 타워 설치 비용: ${state.totalBuildSpent.toLocaleString()}<br>
-            총 타워 업그레이드 비용: ${state.totalUpgradeSpent.toLocaleString()}<br>
-            처치한 몬스터: ${state.monstersKilled.toLocaleString()}
+        
+        const newHtml = `
+            <h2>GAME OVER</h2>
+            <p>
+                최종 웨이브: ${state.waveNumber.toLocaleString()}<br>
+                최종 점수: ${state.playerScore.toLocaleString()}<br>
+                처치한 몬스터: ${state.monstersKilled.toLocaleString()}
+            </p>
+            <div class="stats-container">
+                <strong>--- 상세 정보 ---</strong><br>
+                획득한 총 에너지: ⚡${state.totalEnergyEarned.toLocaleString()}<br>
+                총 타워 설치 비용: ⚡${state.totalBuildSpent.toLocaleString()}<br>
+                총 업그레이드 비용: ⚡${state.totalUpgradeSpent.toLocaleString()}<br>
+                총 수리 비용: ⚡${state.totalRepairSpent.toLocaleString()}<br>
+                총 누적 데미지: ${Math.floor(state.totalDamageDealt).toLocaleString()}<br>
+                <strong>--- 건설된 타워 ---</strong><br>
+                ${towerCountString || "없음"}
+            </div>
+            <button class="restart-btn" onclick="window.location.reload()">다시 시작</button>
         `;
-        p.innerHTML = details;
+
+        gameOverContent.innerHTML = newHtml;
         dom.gameOverlay.style.display = 'flex';
     }
 
