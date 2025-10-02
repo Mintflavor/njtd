@@ -53,6 +53,22 @@ import { dom, state } from './state.js';
         
         dom.gameBoard.addEventListener('click', handleCellClick);
         dom.placementMenu.addEventListener('click', handleMenuClick);
+
+        let transparencyTimeout;
+        dom.placementMenu.addEventListener('mouseover', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                clearTimeout(transparencyTimeout);
+                transparencyTimeout = setTimeout(() => {
+                    dom.placementMenu.classList.add('transparent');
+                }, 100);
+            }
+        });
+        dom.placementMenu.addEventListener('mouseout', (e) => {
+            clearTimeout(transparencyTimeout);
+            if (dom.placementMenu.classList.contains('transparent')) {
+                dom.placementMenu.classList.remove('transparent');
+            }
+        });
         
         dom.buildOptions.querySelectorAll('button').forEach(button => {
             button.addEventListener('mouseenter', showPathAndRangePreview);
@@ -127,13 +143,16 @@ import { dom, state } from './state.js';
                     if (stats.attackSpeed > 0) desc += `공격 속도: ${stats.attackSpeed / 1000}초<br>`;
                     if (stats.aoeRadius > 0) desc += `광역 데미지: ${stats.aoeDamage} (반경: ${stats.aoeRadius / config.CELL_SIZE}칸)<br>`;
                     if (key === 'WALL') desc += `경로를 막지 않으며, 몬스터는 벽을 공격해서 파괴하고 지나갑니다.<br>`;
-                    desc += `</p><button class="info-btn" onclick="showUpgradeInfoModal('${key}')">레벨별 업그레이드 정보</button></div>`;
+                    if (key !== 'WALL') {
+                        desc += `<button class="info-btn" onclick="showUpgradeInfoModal('${key}')">레벨별 업그레이드 정보</button>`;
+                    }
+                    desc += `</div>`;
                     html += desc;
                 }
             });
         } else if (type === 'monsters') {
-            html += '<h3>몬스터 정보 (다음 웨이브 기준)</h3>';
-            const nextWaveNum = state.waveNumber < 1 ? 1 : state.waveNumber + 1;
+            html += '<h3>몬스터 정보 (현재 웨이브 기준)</h3>';
+            const nextWaveNum = state.waveNumber < 1 ? 1 : state.waveNumber;
             const hpMultiplier = Math.pow(1.2, nextWaveNum - 1);
             Object.values(config.MONSTER_STATS).forEach(stats => {
                 html += `<h4>${stats.name}</h4>`;
@@ -273,31 +292,54 @@ import { dom, state } from './state.js';
 
             const upgradeBtn = dom.upgradeOptions.querySelector('button[data-type="upgrade"]');
             const stats = config.TOWER_STATS[tower.type];
-            let infoText = `<strong>${stats.name} (Lv.${tower.level})</strong><br>HP: ${Math.floor(tower.hp)} / ${tower.maxHp}`;
-
             if(tower.type !== config.TOWER_TYPES.WALL) {
                 upgradeBtn.style.display = 'block';
                 const upgradeCost = Math.floor((config.TOWER_COSTS[tower.type] + tower.totalUpgradeCost) * 0.5);
-                
-                const hpIncrease = Math.floor(config.TOWER_STATS[tower.type].hp * 0.2);
-                const nextHp = Math.min(tower.maxHp + hpIncrease, 500);
-                infoText += ` → ${nextHp}`;
-
                 const baseStats = config.TOWER_STATS[tower.type];
+
+                let nextHpText = ``;
+                if (tower.level < config.MAX_TOWER_LEVEL) {
+                    const hpIncrease = Math.floor(baseStats.hp * 0.2);
+                    const nextHp = Math.min(tower.maxHp + hpIncrease, 500);
+                    nextHpText = ` → ${nextHp}`;
+                }
+                infoText = `<strong>${stats.name} (Lv.${tower.level === config.MAX_TOWER_LEVEL ? '👑' : tower.level})</strong><br>HP: ${Math.floor(tower.hp)} / ${tower.maxHp}${nextHpText}`;
+
                 if (baseStats.damage > 0) {
-                    const multiplier = [config.TOWER_TYPES.CANNON, config.TOWER_TYPES.LASER, config.TOWER_TYPES.MISSILE].includes(tower.type) ? 1.3 : 1.2;
-                    const nextDamage = Math.floor(tower.damage * multiplier);
-                    infoText += `<br>데미지: ${tower.damage} → ${nextDamage}`;
+                    let nextDamageText = '';
+                    if (tower.level < config.MAX_TOWER_LEVEL) {
+                        const multiplier = [config.TOWER_TYPES.CANNON, config.TOWER_TYPES.LASER, config.TOWER_TYPES.MISSILE].includes(tower.type) ? 1.3 : 1.2;
+                        const nextDamage = Math.floor(tower.damage * multiplier);
+                        nextDamageText = ` → ${nextDamage}`;
+                    }
+                    infoText += `<br>데미지: ${tower.damage}${nextDamageText}`;
                 }
 
                 if (tower.type === config.TOWER_TYPES.MISSILE) {
-                    const nextAoe = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.3);
-                    infoText += `<br>광역 데미지: ${tower.aoeDamage || baseStats.aoeDamage} → ${nextAoe}`;
-                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s → ${((tower.attackSpeed - 100) / 1000).toFixed(1)}s`;
+                    let nextAoeText = '';
+                    if (tower.level < config.MAX_TOWER_LEVEL) {
+                        const nextAoe = Math.floor((tower.aoeDamage || baseStats.aoeDamage) * 1.3);
+                        nextAoeText = ` → ${nextAoe}`;
+                    }
+                    infoText += `<br>광역 데미지: ${tower.aoeDamage || baseStats.aoeDamage}${nextAoeText}`;
+                    
+                    let nextASText = '';
+                    if (tower.level < config.MAX_TOWER_LEVEL) {
+                        nextASText = ` → ${((tower.attackSpeed - 100) / 1000).toFixed(1)}s`;
+                    }
+                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s${nextASText}`;
                 } else if (tower.type === config.TOWER_TYPES.RAILGUN) {
-                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s → ${((tower.attackSpeed - 300) / 1000).toFixed(1)}s`;
+                    let nextASText = '';
+                    if (tower.level < config.MAX_TOWER_LEVEL) {
+                        nextASText = ` → ${((tower.attackSpeed - 300) / 1000).toFixed(1)}s`;
+                    }
+                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s${nextASText}`;
                 } else if (tower.type === config.TOWER_TYPES.BUFF) {
-                    infoText += `<br>버프 증폭: x${(tower.buffMultiplier || baseStats.buffMultiplier).toFixed(1)} → x${((tower.buffMultiplier || baseStats.buffMultiplier) + 0.2).toFixed(1)}`;
+                    let nextBuffText = '';
+                    if (tower.level < config.MAX_TOWER_LEVEL) {
+                        nextBuffText = ` → x${((tower.buffMultiplier || baseStats.buffMultiplier) + 0.2).toFixed(1)}`;
+                    }
+                    infoText += `<br>버프 증폭: x${(tower.buffMultiplier || baseStats.buffMultiplier).toFixed(1)}${nextBuffText}`;
                 }
                 infoText += `<br>처치 수: ${tower.killCount || 0}`;
 
@@ -401,7 +443,8 @@ import { dom, state } from './state.js';
         } else { // Build tower
             const towerType = config.TOWER_TYPES[action];
             if (state.playerEnergy >= config.TOWER_COSTS[towerType]) {
-                state.playerEnergy -= config.TOWER_COSTS[towerType];
+        state.playerEnergy -= cost;
+        state.totalBuildSpent += cost;
                 addTower(x, y, towerType);
             }
         }
@@ -1378,21 +1421,19 @@ import { dom, state } from './state.js';
     }
     
     function updateGlobalButtonsState() {
-        if (state.waveInProgress) {
-            dom.startWaveBtn.disabled = true;
-
-            dom.repairAllBtn.disabled = true;
-            dom.upgradeAllBtn.disabled = true;
-            return;
-        }
-        dom.startWaveBtn.disabled = false;
-
-
         const canRepair = state.towers.some(t => t.hp < t.maxHp);
-        dom.repairAllBtn.disabled = !canRepair;
+        dom.repairAllBtn.disabled = state.waveInProgress || !canRepair;
 
-        const canUpgrade = state.towers.some(t => t.level < config.MAX_TOWER_LEVEL && t.type !== config.TOWER_TYPES.WALL);
-        dom.upgradeAllBtn.disabled = !canUpgrade;
+        const upgradableTowers = state.towers.filter(t => t.level < config.MAX_TOWER_LEVEL && t.type !== config.TOWER_TYPES.WALL);
+        if (upgradableTowers.length > 0) {
+            const minUpgradeCost = upgradableTowers.reduce((minCost, t) => {
+                const cost = Math.floor((config.TOWER_COSTS[t.type] + t.totalUpgradeCost) * 0.5);
+                return Math.min(minCost, cost);
+            }, Infinity);
+            dom.upgradeAllBtn.disabled = state.waveInProgress || state.playerEnergy < minUpgradeCost;
+        } else {
+            dom.upgradeAllBtn.disabled = true;
+        }
     }
 
     function showNotification(message) {
@@ -1489,24 +1530,15 @@ import { dom, state } from './state.js';
             .join('<br>');
 
         const gameOverContent = dom.gameOverlay.querySelector('div');
-        gameOverContent.innerHTML = `
-            <h2>GAME OVER</h2>
-            <p>
-                최종 웨이브: ${state.waveNumber}<br>
-                최종 점수: ${state.playerScore}<br>
-                처치한 몬스터: ${state.monstersKilled}
-            </p>
-            <div class="stats-container">
-                <strong>--- 상세 정보 ---</strong>
-                획득한 총 에너지: ⚡${state.totalEnergyEarned}<br>
-                총 업그레이드 비용: ⚡${state.totalUpgradeSpent}<br>
-                총 수리 비용: ⚡${state.totalRepairSpent}<br>
-                총 누적 데미지: ${Math.floor(state.totalDamageDealt)}
-                <strong>--- 건설된 타워 ---</strong>
-                ${towerCountString || "없음"}
-            </div>
-            <button class="restart-btn" onclick="window.location.reload()">다시 시작</button>
+        const details = `
+            최종 점수: ${state.score.toLocaleString()}<br>
+            도달한 웨이브: ${state.waveNumber}<br>
+            총 누적 데미지: ${state.totalDamageDealt.toLocaleString()}<br>
+            총 타워 설치 비용: ${state.totalBuildSpent.toLocaleString()}<br>
+            총 타워 업그레이드 비용: ${state.totalUpgradeSpent.toLocaleString()}<br>
+            처치한 몬스터: ${state.totalKills.toLocaleString()}
         `;
+        p.innerHTML = details;
         dom.gameOverlay.style.display = 'flex';
     }
 

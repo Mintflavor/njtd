@@ -30,7 +30,7 @@ export const state = {
     nodes: [],
     cells: [],
     towers: [],
-    playerEnergy: 500,
+    playerEnergy: 50000,
     playerLives: 20,
     waveNumber: 0,
     playerScore: 0,
@@ -50,5 +50,6 @@ export const state = {
     totalEnergyEarned: 500,
     totalRepairSpent: 0,
     totalUpgradeSpent: 0,
+    totalBuildSpent: 0,
     totalDamageDealt: 0
 };
