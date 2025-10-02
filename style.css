@@ -377,6 +377,7 @@
             box-sizing: border-box;
             opacity: 0;
             transition: opacity 0.2s;
+            z-index: 5; /* 사거리 표시가 다른 타워 위에 오도록 설정 */
         }
         .cell-v2:hover .tower-range-indicator {
             opacity: 1;

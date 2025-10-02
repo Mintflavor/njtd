@@ -170,7 +170,7 @@ import { dom, state } from './state.js';
             });
         } else if (type === 'monsters') {
             html += '<h3>몬스터 정보 (다음 웨이브 기준)</h3>';
-            const nextWaveNum = state.waveNumber < 1 ? 1 : state.waveNumber + 1;
+            const nextWaveNum = state.waveNumber;
             const hpMultiplier = Math.pow(1.2, nextWaveNum - 1);
             Object.values(config.MONSTER_STATS).forEach(stats => {
                 html += `<div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #444;">`;
