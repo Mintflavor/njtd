@@ -296,15 +296,18 @@ import { dom, state } from './state.js';
             dom.upgradeOptions.style.display = 'block';
 
             const repairBtn = dom.upgradeOptions.querySelector('button[data-type="repair"]');
-            
-            const lostHpRatio = (tower.maxHp > 0) ? (tower.maxHp - tower.hp) / tower.maxHp : 0;
             const totalInvested = config.TOWER_COSTS[tower.type] + tower.totalUpgradeCost;
-            const repairCost = Math.ceil(totalInvested * lostHpRatio);
+            const fullRepairCost = Math.ceil(totalInvested * ((tower.maxHp - tower.hp) / tower.maxHp));
 
-            if (repairCost > 0) {
+            if (fullRepairCost > 0) {
                 repairBtn.style.display = 'block';
-                repairBtn.disabled = state.playerEnergy < repairCost || state.waveInProgress;
-                repairBtn.querySelector('span').textContent = `⚡${repairCost}`;
+                repairBtn.disabled = state.playerEnergy <= 0 || state.waveInProgress;
+                
+                const costPerHp = totalInvested > 0 ? totalInvested / tower.maxHp : 0;
+                const hpCanAfford = costPerHp > 0 ? Math.floor(state.playerEnergy / costPerHp) : 0;
+                const affordableHealAmount = Math.min(tower.maxHp - tower.hp, hpCanAfford);
+                const affordableCost = Math.ceil(affordableHealAmount * costPerHp);
+                repairBtn.querySelector('span').textContent = `⚡${affordableCost}`;
             } else {
                 repairBtn.style.display = 'none';
             }
@@ -325,13 +328,50 @@ import { dom, state } from './state.js';
                 infoText = `<strong>${stats.name} (Lv.${tower.level === config.MAX_TOWER_LEVEL ? '👑' : tower.level})</strong><br>HP: ${Math.floor(tower.hp)} / ${tower.maxHp}${nextHpText}`;
 
                 if (baseStats.damage > 0) {
+                    const effectiveDamage = getTowerEffectiveDamage(tower);
+                    let buffText = '';
+                    if (effectiveDamage > tower.damage) {
+                        buffText = ` <span style="color: #4CAF50;">(+${Math.floor(effectiveDamage - tower.damage)})</span>`;
+                    }
+
                     let nextDamageText = '';
                     if (tower.level < config.MAX_TOWER_LEVEL) {
                         const multiplier = [config.TOWER_TYPES.CANNON, config.TOWER_TYPES.LASER, config.TOWER_TYPES.MISSILE].includes(tower.type) ? 1.3 : 1.2;
-                        const nextDamage = Math.floor(tower.damage * multiplier);
-                        nextDamageText = ` → ${nextDamage}`;
+                        const nextBaseDamage = Math.floor(tower.damage * multiplier);
+                        
+                        const nextEffectiveDamage = getTowerEffectiveDamage({ ...tower, damage: nextBaseDamage });
+                        
+                        nextDamageText = ` → ${nextBaseDamage}`;
+                        if (nextEffectiveDamage > nextBaseDamage) {
+                            nextDamageText += ` <span style="color: #4CAF50;">(+${Math.floor(nextEffectiveDamage - nextBaseDamage)})</span>`;
+                        }
                     }
-                    infoText += `<br>데미지: ${tower.damage}${nextDamageText}`;
+                    infoText += `<br>데미지: ${tower.damage}${buffText}${nextDamageText}`;
+                }
+
+                if (baseStats.attackSpeed > 0) {
+                    const effectiveAS = getTowerEffectiveAttackSpeed(tower);
+                    let asBuffText = '';
+                    if (effectiveAS < tower.attackSpeed) {
+                        asBuffText = ` <span style="color: #4CAF50;">(${(effectiveAS / 1000).toFixed(2)}s)</span>`;
+                    }
+
+                    let nextASText = '';
+                    if (tower.level < config.MAX_TOWER_LEVEL) {
+                        let nextASValue = tower.attackSpeed;
+                        if (tower.type === config.TOWER_TYPES.MISSILE) nextASValue -= 100;
+                        if (tower.type === config.TOWER_TYPES.RAILGUN) nextASValue -= 300;
+                        
+                        if (nextASValue !== tower.attackSpeed) {
+                           const nextTowerState = {...tower, attackSpeed: nextASValue, level: tower.level + 1};
+                           const nextEffectiveAS = getTowerEffectiveAttackSpeed(nextTowerState);
+                           nextASText = ` → ${(nextASValue / 1000).toFixed(2)}s`;
+                           if (nextEffectiveAS < nextASValue) {
+                               nextASText += ` <span style="color: #4CAF50;">(${(nextEffectiveAS / 1000).toFixed(2)}s)</span>`;
+                           }
+                        }
+                    }
+                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(2)}s${asBuffText}${nextASText}`;
                 }
 
                 if (tower.type === config.TOWER_TYPES.MISSILE) {
@@ -341,18 +381,6 @@ import { dom, state } from './state.js';
                         nextAoeText = ` → ${nextAoe}`;
                     }
                     infoText += `<br>광역 데미지: ${tower.aoeDamage || baseStats.aoeDamage}${nextAoeText}`;
-                    
-                    let nextASText = '';
-                    if (tower.level < config.MAX_TOWER_LEVEL) {
-                        nextASText = ` → ${((tower.attackSpeed - 100) / 1000).toFixed(1)}s`;
-                    }
-                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s${nextASText}`;
-                } else if (tower.type === config.TOWER_TYPES.RAILGUN) {
-                    let nextASText = '';
-                    if (tower.level < config.MAX_TOWER_LEVEL) {
-                        nextASText = ` → ${((tower.attackSpeed - 300) / 1000).toFixed(1)}s`;
-                    }
-                    infoText += `<br>공격 속도: ${(tower.attackSpeed / 1000).toFixed(1)}s${nextASText}`;
                 } else if (tower.type === config.TOWER_TYPES.BUFF) {
                     let nextBuffText = '';
                     if (tower.level < config.MAX_TOWER_LEVEL) {
@@ -360,7 +388,10 @@ import { dom, state } from './state.js';
                     }
                     infoText += `<br>버프 증폭: x${(tower.buffMultiplier || baseStats.buffMultiplier).toFixed(1)}${nextBuffText}`;
                 }
-                infoText += `<br>처치 수: ${tower.killCount || 0}`;
+                
+                if (tower.type !== config.TOWER_TYPES.BUFF) {
+                    infoText += `<br>처치 수: ${tower.killCount || 0}`;
+                }
 
                 const towerTypeKey = Object.keys(config.TOWER_TYPES).find(key => config.TOWER_TYPES[key] === tower.type);
                 if (tower.level === config.MAX_TOWER_LEVEL && config.TOWER_SPECIAL_ABILITIES[towerTypeKey]) {
@@ -368,12 +399,7 @@ import { dom, state } from './state.js';
                     const match = specialAbilityFullText.match(/\[(.*?)\]/);
                     if (match && match[1]) {
                         const specialAbilityName = match[1];
-                        const effectiveDamage = getTowerEffectiveDamage(tower);
-                    let buffText = '';
-                    if (effectiveDamage > tower.damage) {
-                        buffText = ` <span style="color: #4CAF50;">(+${Math.floor(effectiveDamage - tower.damage)})</span>`;
-                    }
-                    infoText += `<br>데미지: ${tower.damage}${buffText}${nextDamageText}`;
+                        infoText += `<br><br><span class="special-ability-span" data-tooltip="${specialAbilityFullText}" style="font-size: 12px; font-weight: bold; color: #61dafb; cursor: help;">Lv.10 특수능력: [${specialAbilityName}]</span>`;
                     }
                 }
 
@@ -774,15 +800,27 @@ import { dom, state } from './state.js';
 
             // Slime splitting logic
             if (monster.type === 'slime') {
+                const currentNode = monster.path[monster.pathIndex - 1];
+                const nextNode = monster.path[monster.pathIndex];
+                
+                let dx = 5, dy = 0; // Default to horizontal split
+                if (nextNode && currentNode) {
+                    if (nextNode.x !== currentNode.x) { // Moving horizontally
+                        dx = 5; dy = 0;
+                    } else { // Moving vertically
+                        dx = 0; dy = 5;
+                    }
+                }
+
                 const spawnOptions1 = {
-                    spawnX: monster.x - 15,
-                    spawnY: monster.y,
+                    spawnX: monster.x - dx,
+                    spawnY: monster.y - dy,
                     pathIndex: monster.pathIndex
                 };
                 createMonster('child_slime', 1, monster.path, spawnOptions1);
                 const spawnOptions2 = {
-                    spawnX: monster.x + 5,
-                    spawnY: monster.y,
+                    spawnX: monster.x + dx,
+                    spawnY: monster.y + dy,
                     pathIndex: monster.pathIndex
                 };
                 createMonster('child_slime', 1, monster.path, spawnOptions2);
@@ -824,6 +862,27 @@ import { dom, state } from './state.js';
             damage *= bestMultiplier;
         }
         return damage;
+    }
+
+    function getTowerEffectiveAttackSpeed(tower) {
+        let attackSpeed = tower.attackSpeed;
+        
+        // Dual-Effect for max level Buff Tower
+        const buffTowersInRange = state.towers.filter(b => 
+            b.type === config.TOWER_TYPES.BUFF && 
+            b.level === config.MAX_TOWER_LEVEL && 
+            Math.hypot(tower.pixelX - b.pixelX, tower.pixelY - b.pixelY) < config.TOWER_STATS[config.TOWER_TYPES.BUFF].range
+        );
+        if (buffTowersInRange.length > 0) {
+            attackSpeed *= 0.85; 
+        }
+
+        // Supercharge for max level Laser
+        if (tower.type === config.TOWER_TYPES.LASER && tower.level === config.MAX_TOWER_LEVEL) {
+            attackSpeed /= (1 + (tower.superchargeStacks || 0) * 0.05);
+        }
+
+        return attackSpeed;
     }
 
     function updateAllBuffs() {
@@ -947,22 +1006,10 @@ import { dom, state } from './state.js';
                 }
 
                 if (target) {
-                    let attackSpeedMultiplier = 1;
-                    // Dual-Effect for Buff Tower
-                    const buffTowersInRange = state.towers.filter(b => b.type === config.TOWER_TYPES.BUFF && b.level === config.MAX_TOWER_LEVEL && Math.hypot(tower.pixelX - b.pixelX, tower.pixelY - b.pixelY) < config.TOWER_STATS[config.TOWER_TYPES.BUFF].range);
-                    if (buffTowersInRange.length > 0) {
-                        attackSpeedMultiplier = 0.85; 
-                    }
-
-                    // Supercharge for Laser
-                    if (tower.type === config.TOWER_TYPES.LASER && tower.level === config.MAX_TOWER_LEVEL) {
-                        attackSpeedMultiplier /= (1 + tower.superchargeStacks * 0.05);
-                    }
-
                     if (tower.type === config.TOWER_TYPES.LASER) fireLaserBeam(tower, target);
                     else if (tower.type === config.TOWER_TYPES.RAILGUN) fireRailgun(tower, target);
                     else fireProjectile(tower, target);
-                    tower.cooldown = tower.attackSpeed * attackSpeedMultiplier;
+                    tower.cooldown = getTowerEffectiveAttackSpeed(tower);
                 } else {
                     // Reset stacks if no target
                     if (tower.type === config.TOWER_TYPES.LASER) {
@@ -1361,7 +1408,13 @@ import { dom, state } from './state.js';
     function findTarget(tower) {
         let closestMonster = null;
         let minDistance = config.TOWER_STATS[tower.type].range;
+        const isPhysicalTower = tower.type === config.TOWER_TYPES.CANNON || tower.type === config.TOWER_TYPES.MISSILE;
+
         state.monsters.forEach(monster => {
+            if (isPhysicalTower && monster.type === 'ghost' && monster.isPhasing) {
+                return; // Cannot be targeted by physical towers while phasing
+            }
+
             const dist = Math.hypot(tower.pixelX - monster.x, tower.pixelY - monster.y);
             if (dist < minDistance) {
                 minDistance = dist;
