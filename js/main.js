@@ -129,10 +129,13 @@ import { dom, state } from './state.js';
             }
         });
 
+        dom.undoBtn.addEventListener('click', undoLastAction);
+
         updateUI();
         updateWaveInfoUI();
         updateGlobalButtonsState();
         updatePathVisuals();
+        updateActionLogUI();
         requestAnimationFrame(gameLoop);
     }
 
@@ -446,6 +449,9 @@ import { dom, state } from './state.js';
             const existingTower = state.towers.find(t => t.x === x && t.y === y);
             if(existingTower) {
                 const refund = Math.floor((config.TOWER_COSTS[existingTower.type] + existingTower.totalUpgradeCost) * 0.7);
+                const towerName = config.TOWER_STATS[existingTower.type].name;
+                recordAction('SELL', { towerObject: { ...existingTower }, refund }, `[${y},${x}] ${towerName} 철거 (+⚡${refund})`);
+                
                 state.playerEnergy += refund;
                 removeTower(existingTower);
             }
@@ -454,6 +460,19 @@ import { dom, state } from './state.js';
             if(tower && tower.level < config.MAX_TOWER_LEVEL) {
                 const upgradeCost = Math.floor((config.TOWER_COSTS[tower.type] + tower.totalUpgradeCost) * 0.5);
                 if(state.playerEnergy >= upgradeCost) {
+                    const previousStats = {
+                        level: tower.level,
+                        damage: tower.damage,
+                        attackSpeed: tower.attackSpeed,
+                        hp: tower.hp,
+                        maxHp: tower.maxHp,
+                        totalUpgradeCost: tower.totalUpgradeCost,
+                        aoeDamage: tower.aoeDamage,
+                        buffMultiplier: tower.buffMultiplier
+                    };
+                    const towerName = config.TOWER_STATS[tower.type].name;
+                    recordAction('UPGRADE', { towerId: tower.id, cost: upgradeCost, previousStats }, `[${y},${x}] ${towerName} 업그레이드 (Lv.${tower.level}→${tower.level+1}, ⚡${upgradeCost})`);
+
                     state.playerEnergy -= upgradeCost;
                     state.totalUpgradeSpent += upgradeCost;
                     tower.totalUpgradeCost += upgradeCost;
@@ -506,6 +525,9 @@ import { dom, state } from './state.js';
 
                     if (hpToActuallyHeal > 0) {
                         const actualCost = Math.ceil(hpToActuallyHeal * costPerHp);
+                        const towerName = config.TOWER_STATS[tower.type].name;
+                        recordAction('REPAIR', { towerId: tower.id, cost: actualCost, previousHp: tower.hp }, `[${y},${x}] ${towerName} 수리 (⚡${actualCost})`);
+
                         state.playerEnergy -= actualCost;
                         state.totalRepairSpent += actualCost;
                         tower.hp += hpToActuallyHeal;
@@ -519,7 +541,9 @@ import { dom, state } from './state.js';
             if (state.playerEnergy >= cost) {
                 state.playerEnergy -= cost;
                 state.totalBuildSpent += cost;
-                addTower(x, y, towerType);
+                const newTower = addTower(x, y, towerType);
+                const towerName = config.TOWER_STATS[newTower.type].name;
+                recordAction('BUILD', { towerId: newTower.id, cost }, `[${y},${x}]에 ${towerName} 건설 (⚡${cost})`);
             }
         }
         dom.placementMenu.style.display = 'none';
@@ -529,9 +553,11 @@ import { dom, state } from './state.js';
     }
 
     function addTower(x, y, type) {
+        const towerId = state.towerIdCounter++;
         state.grid[y][x] = type;
         const stats = config.TOWER_STATS[type];
         const newTower = {
+            id: towerId,
             x, y, type,
             pixelX: x * config.CELL_SIZE + config.CELL_SIZE / 2,
             pixelY: y * config.CELL_SIZE + config.CELL_SIZE / 2,
@@ -569,6 +595,7 @@ import { dom, state } from './state.js';
         updateTowerHPBar(newTower);
         updateAllBuffs();
         updatePathVisuals();
+        return newTower;
     }
 
     function removeTower(tower) {
@@ -587,7 +614,7 @@ import { dom, state } from './state.js';
             rangeIndicator.style.height = '0';
         }
         
-        state.towers = state.towers.filter(t => t !== tower);
+        state.towers = state.towers.filter(t => t.id !== tower.id);
         updateAllBuffs();
         updateUI();
         if (!state.waveInProgress) {
@@ -1260,6 +1287,9 @@ import { dom, state } from './state.js';
         }
         if (state.monstersToSpawn.length === 0 && state.monsters.length === 0 && state.waveInProgress) {
             state.waveInProgress = false;
+
+            state.actionHistory = [];
+            updateActionLogUI();
             
             if (state.waveNumber >= 1) {
                 randomizeEndPoint();
@@ -1447,6 +1477,7 @@ import { dom, state } from './state.js';
     function startWave() {
         if (state.waveInProgress) return;
         state.waveInProgress = true;
+        dom.undoBtn.disabled = true;
         updateGlobalButtonsState();
         updateUI();
         dom.waveInfoBox.innerHTML = '웨이브 진행 중...';
@@ -1476,6 +1507,7 @@ import { dom, state } from './state.js';
     function repairAllTowers() {
         if (state.waveInProgress || state.playerEnergy <= 0) return;
 
+        const repairData = [];
         let totalCost = 0;
         let repairedCount = 0;
 
@@ -1488,11 +1520,14 @@ import { dom, state } from './state.js';
             const totalInvested = config.TOWER_COSTS[tower.type] + tower.totalUpgradeCost;
             const costPerHp = totalInvested / tower.maxHp;
 
-            const hpCanAfford = Math.floor(state.playerEnergy / costPerHp);
+            const hpCanAfford = costPerHp > 0 ? Math.floor(state.playerEnergy / costPerHp) : 0;
             const hpToActuallyHeal = Math.min(hpToHeal, hpCanAfford);
 
             if (hpToActuallyHeal > 0) {
                 const actualCost = Math.ceil(hpToActuallyHeal * costPerHp);
+                
+                repairData.push({ towerId: tower.id, cost: actualCost, previousHp: tower.hp });
+
                 state.playerEnergy -= actualCost;
                 state.totalRepairSpent += actualCost;
                 tower.hp += hpToActuallyHeal;
@@ -1505,6 +1540,7 @@ import { dom, state } from './state.js';
         }
 
         if (totalCost > 0) {
+            recordAction('REPAIR_ALL', { repairs: repairData }, `전체 수리 (⚡${totalCost})`);
             updateUI();
             showNotification(`⚡${totalCost}를 소모하여 타워들을 수리했습니다. (${repairedCount}개 완전 수리)`);
         } else {
@@ -1527,10 +1563,24 @@ import { dom, state } from './state.js';
         
         let totalCost = 0;
         const upgradedCounts = {};
+        const upgradeData = [];
 
         for(const item of upgradableTowers) {
             if (state.playerEnergy >= item.cost) {
                 const tower = item.tower;
+
+                const previousStats = {
+                    level: tower.level,
+                    damage: tower.damage,
+                    attackSpeed: tower.attackSpeed,
+                    hp: tower.hp,
+                    maxHp: tower.maxHp,
+                    totalUpgradeCost: tower.totalUpgradeCost,
+                    aoeDamage: tower.aoeDamage,
+                    buffMultiplier: tower.buffMultiplier
+                };
+                upgradeData.push({ towerId: tower.id, cost: item.cost, previousStats });
+
                 state.playerEnergy -= item.cost;
                 state.totalUpgradeSpent += item.cost;
                 totalCost += item.cost;
@@ -1576,6 +1626,7 @@ import { dom, state } from './state.js';
             }
         }
         if (totalCost > 0) {
+            recordAction('UPGRADE_ALL', { upgrades: upgradeData }, `전체 업그레이드 (⚡${totalCost})`);
             let summary = `⚡${totalCost}를 소모하여 업그레이드 완료!<br>`;
             let totalUpgraded = 0;
             for(const name in upgradedCounts) {
@@ -1730,5 +1781,132 @@ import { dom, state } from './state.js';
         dom.gameOverlay.style.display = 'flex';
     }
 
+    function recordAction(type, data, description) {
+        if (state.waveInProgress) return;
+        state.actionHistory.push({ type, data, description });
+        updateActionLogUI();
+    }
+
+    function updateActionLogUI() {
+        if (state.actionHistory.length === 0) {
+            dom.actionLog.innerHTML = '<p>수행한 작업이 없습니다.</p>';
+            dom.undoBtn.disabled = true;
+        } else {
+            dom.actionLog.innerHTML = state.actionHistory.map(action => `<p>${action.description}</p>`).join('');
+            dom.actionLog.scrollTop = dom.actionLog.scrollHeight;
+            dom.undoBtn.disabled = state.waveInProgress;
+        }
+    }
+
+    function undoLastAction() {
+        if (state.actionHistory.length === 0 || state.waveInProgress) return;
+
+        const lastAction = state.actionHistory.pop();
+        if (!lastAction) return;
+
+        switch (lastAction.type) {
+            case 'BUILD': {
+                const { towerId, cost } = lastAction.data;
+                const tower = state.towers.find(t => t.id === towerId);
+                if (tower) {
+                    removeTower(tower);
+                    state.playerEnergy += cost;
+                }
+                break;
+            }
+            case 'SELL': {
+                const { towerObject, refund } = lastAction.data;
+                state.towers.push(towerObject);
+                state.grid[towerObject.y][towerObject.x] = towerObject.type;
+                restoreTowerVisuals(towerObject);
+                state.playerEnergy -= refund;
+                break;
+            }
+            case 'UPGRADE': {
+                const { towerId, cost, previousStats } = lastAction.data;
+                const tower = state.towers.find(t => t.id === towerId);
+                if (tower) {
+                    Object.assign(tower, previousStats);
+                    state.playerEnergy += cost;
+                    updateTowerHPBar(tower);
+                    const levelDisplay = state.cells[tower.y][tower.x].querySelector('.tower-level');
+                    levelDisplay.textContent = `L${tower.level}`;
+                }
+                break;
+            }
+            case 'REPAIR': {
+                const { towerId, cost, previousHp } = lastAction.data;
+                const tower = state.towers.find(t => t.id === towerId);
+                if (tower) {
+                    tower.hp = previousHp;
+                    state.playerEnergy += cost;
+                    updateTowerHPBar(tower);
+                }
+                break;
+            }
+            case 'UPGRADE_ALL': {
+                const { upgrades } = lastAction.data;
+                let totalRefund = 0;
+                upgrades.forEach(upgrade => {
+                    const tower = state.towers.find(t => t.id === upgrade.towerId);
+                    if (tower) {
+                        Object.assign(tower, upgrade.previousStats);
+                        updateTowerHPBar(tower);
+                        const levelDisplay = state.cells[tower.y][tower.x].querySelector('.tower-level');
+                        levelDisplay.textContent = `L${tower.level}`;
+                        totalRefund += upgrade.cost;
+                    }
+                });
+                state.playerEnergy += totalRefund;
+                break;
+            }
+            case 'REPAIR_ALL': {
+                const { repairs } = lastAction.data;
+                let totalRefund = 0;
+                repairs.forEach(repair => {
+                    const tower = state.towers.find(t => t.id === repair.towerId);
+                    if (tower) {
+                        tower.hp = repair.previousHp;
+                        updateTowerHPBar(tower);
+                        totalRefund += repair.cost;
+                    }
+                });
+                state.playerEnergy += totalRefund;
+                break;
+            }
+        }
+
+        updateAllBuffs();
+        updateUI();
+        updateGlobalButtonsState();
+        updatePathVisuals();
+        updateActionLogUI();
+    }
+
+    function restoreTowerVisuals(tower) {
+        const cell = state.cells[tower.y][tower.x];
+        cell.classList.add(config.TOWER_STYLES[tower.type]);
+        cell.querySelector('.tower-symbol').textContent = config.TOWER_SYMBOLS[tower.type];
+        if (config.TOWER_STATS[tower.type].range > 0) {
+            const rangeIndicator = cell.querySelector('.tower-range-indicator');
+            rangeIndicator.style.width = `${config.TOWER_STATS[tower.type].range * 2}px`;
+            rangeIndicator.style.height = `${config.TOWER_STATS[tower.type].range * 2}px`;
+        }
+        if (tower.level > 0 && tower.type !== config.TOWER_TYPES.WALL) {
+            const levelDisplay = cell.querySelector('.tower-level');
+            if (tower.level === config.MAX_TOWER_LEVEL) {
+                levelDisplay.textContent = '👑';
+            } else {
+                levelDisplay.textContent = `L${tower.level}`;
+            }
+        }
+        if (tower.type === config.TOWER_TYPES.RAILGUN) {
+            cell.querySelector('.cooldown-progress-container').style.display = 'block';
+        }
+        updateTowerHPBar(tower);
+    }
+
     init();
 })();
+
+

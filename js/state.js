@@ -23,7 +23,9 @@ export const dom = {
     modalCloseBtn: document.getElementById('modal-close-btn'),
     notificationEl: document.getElementById('notification'),
     tooltipEl: document.getElementById('tooltip'),
-    pathArrowsContainer: document.getElementById('path-arrows-container')
+    pathArrowsContainer: document.getElementById('path-arrows-container'),
+    actionLog: document.getElementById('action-log'),
+    undoBtn: document.getElementById('undo-btn')
 };
 
 export const state = {
@@ -52,5 +54,7 @@ export const state = {
     totalRepairSpent: 0,
     totalUpgradeSpent: 0,
     totalBuildSpent: 0,
-    totalDamageDealt: 0
+    totalDamageDealt: 0,
+    actionHistory: [],
+    towerIdCounter: 0
 };
