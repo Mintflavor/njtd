@@ -878,7 +878,7 @@ import { dom, state } from './state.js';
             if (monster.type === 'boss') {
                 state.playerLives = Math.min(20, state.playerLives + 5);
                 // 보스 처치 시 보너스 에너지 리워드
-                const bossEnergyBonus = state.waveNumber * 200;
+                const bossEnergyBonus = state.waveNumber * 2000;
                 state.playerEnergy += bossEnergyBonus;
                 state.totalEnergyEarned += bossEnergyBonus;
                 showNotification(`보스 처치! 생명력 5와 ⚡${bossEnergyBonus} 에너지를 획득했습니다.`);
